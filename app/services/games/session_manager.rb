@@ -50,7 +50,7 @@ module Games
     # @param word [String] プレイヤーが入力した単語
     # @return [Hash] ターン処理結果
     def player_turn(word)
-      raise GameSessionError, "現在はプレイヤーのターンではありません" unless @current_state == GAME_STATE[:player_turn]
+      raise GameSessionError, '現在はプレイヤーのターンではありません' unless @current_state == GAME_STATE[:player_turn]
 
       word = word.downcase.strip
 
@@ -58,11 +58,11 @@ module Games
       validate_word(word)
 
       # DBから単語を検索
-      word_record = Word.find_by("LOWER(word) = ?", word)
+      word_record = Word.find_by('LOWER(word) = ?', word)
 
       if word_record.nil?
         # TODO: 単語がDBに存在しない場合はOpenAI APIで検証する処理を実装
-        raise InvalidWordError, "その単語はRuby関連の単語ではありません"
+        raise InvalidWordError, 'その単語はRuby関連の単語ではありません'
       end
 
       # ゲームに単語を記録
@@ -84,7 +84,9 @@ module Games
     # コンピューターのターンを処理
     # @return [Hash] コンピューターの応答結果
     def computer_turn
-      raise GameSessionError, "現在はコンピューターのターンではありません" unless @current_state == GAME_STATE[:computer_turn]
+      unless @current_state == GAME_STATE[:computer_turn]
+        raise GameSessionError, '現在はコンピューターのターンではありません'
+      end
 
       last_letter = @last_word[-1]
 
@@ -130,7 +132,7 @@ module Games
       @end_reason = reason
       @current_state = GAME_STATE[:game_over]
 
-      # スコアを更新（ターン数-1がスコア）
+      # スコアを更新（ターン数がスコア）
       @game.update(score: @used_words.length)
 
       {
@@ -161,7 +163,7 @@ module Games
     # @param word [String] 検証する単語
     def validate_word(word)
       # 2文字以上の単語かチェック
-      raise InvalidWordError, "単語は2文字以上である必要があります" if word.length < 2
+      raise InvalidWordError, '単語は2文字以上である必要があります' if word.length < 2
 
       # 使用済み単語かチェック
       if @used_words.any? { |w| w.downcase == word.downcase }
@@ -169,14 +171,14 @@ module Games
       end
 
       # 前の単語の最後の文字と一致するかチェック（最初のターンを除く）
-      if @last_word.present?
-        last_char = @last_word[-1]
-        first_char = word[0]
+      return unless @last_word.present?
 
-        if last_char.downcase != first_char.downcase
-          raise InvalidFirstLetterError, "単語は「#{last_char}」で始まる必要があります"
-        end
-      end
+      last_char = @last_word[-1]
+      first_char = word[0]
+
+      return unless last_char.downcase != first_char.downcase
+
+      raise InvalidFirstLetterError, "単語は「#{last_char}」で始まる必要があります"
     end
 
     # 単語を記録

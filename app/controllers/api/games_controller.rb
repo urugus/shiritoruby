@@ -6,14 +6,14 @@ class Api::GamesController < ApplicationController
   # 直近の高スコアを返す
   def index
     @games = Game.high_scores.limit(10)
-    render json: @games.map { |game|
+    render json: @games.map do |game|
       {
         id: game.id,
         player_name: game.player_name,
         score: game.score,
         created_at: game.created_at
       }
-    }
+    end
   end
 
   # GET /api/games/current
@@ -22,19 +22,19 @@ class Api::GamesController < ApplicationController
     if @session_manager
       render json: @session_manager.game_state
     else
-      render json: { error: "現在進行中のゲームがありません" }, status: :not_found
+      render json: { error: '現在進行中のゲームがありません' }, status: :not_found
     end
   end
 
   # POST /api/games
   # 新しいゲームを作成
   def create
-    player_name = params[:player_name] || "ゲスト"
+    player_name = params[:player_name] || 'ゲスト'
     @session_manager = Games::SessionManager.new(player_name)
     session[:game_id] = @session_manager.game.id
 
     render json: {
-      message: "新しいゲームを開始しました",
+      message: '新しいゲームを開始しました',
       game: @session_manager.game_state
     }, status: :created
   end
@@ -42,16 +42,14 @@ class Api::GamesController < ApplicationController
   # POST /api/games/submit_word
   # プレイヤーが単語を提出
   def submit_word
-    return render json: { error: "単語が提供されていません" }, status: :bad_request unless params[:word].present?
+    return render json: { error: '単語が提供されていません' }, status: :bad_request unless params[:word].present?
 
     begin
       result = @session_manager.player_turn(params[:word])
       render json: result
-    rescue Games::SessionManager::InvalidWordError => e
-      render json: { error: e.message }, status: :unprocessable_entity
-    rescue Games::SessionManager::WordAlreadyUsedError => e
-      render json: { error: e.message }, status: :unprocessable_entity
-    rescue Games::SessionManager::InvalidFirstLetterError => e
+    rescue Games::SessionManager::InvalidWordError,
+           Games::SessionManager::WordAlreadyUsedError,
+           Games::SessionManager::InvalidFirstLetterError => e
       render json: { error: e.message }, status: :unprocessable_entity
     rescue Games::SessionManager::GameSessionError => e
       render json: { error: e.message }, status: :bad_request
@@ -65,11 +63,11 @@ class Api::GamesController < ApplicationController
       result = @session_manager.timeout
       render json: {
         game_over: true,
-        message: "制限時間を超過しました。コンピューターの勝利です。",
+        message: '制限時間を超過しました。コンピューターの勝利です。',
         game: @session_manager.game_state
       }
     else
-      render json: { error: "現在プレイヤーのターンではありません" }, status: :bad_request
+      render json: { error: '現在プレイヤーのターンではありません' }, status: :bad_request
     end
   end
 
