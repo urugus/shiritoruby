@@ -55,6 +55,15 @@ group :development, :test do
 
   # Fake data generator
   gem "faker"
+
+  # RSpec testing framework
+  gem "rspec-rails"
+
+  # Shoulda matchers for RSpec
+  gem "shoulda-matchers"
+
+  # Database cleaner for tests
+  gem "database_cleaner-active_record"
 end
 
 group :development do

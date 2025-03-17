@@ -1,4 +1,4 @@
-# 技術的設計 
+# 技術的設計
 
 
 ## データベース設計
@@ -41,21 +41,21 @@
 erDiagram
     words {
         UUID id PK
-        STRING word 
+        STRING word
         STRING category NOT NULL
         ENUM category NOT NULL
         STRING description  NOT NULL
         TIMESTAMP created_at DEFAULT now()
         TIMESTAMP updated_at DEFAULT now()
     }
-    
+
     games {
         UUID id PK
         STRING player_name NOT NULL
         INTEGER score NOT NULL
         TIMESTAMP created_at DEFAULT now()
     }
-    
+
     game_words {
         UUID id PK
         UUID game_id FK
@@ -63,7 +63,7 @@ erDiagram
         INTEGER turn NOT NULL
         TIMESTAMP created_at DEFAULT now()
     }
-    
+
     words ||--o{ game_words : contains
     games ||--o{ game_words : has
 ```
@@ -88,8 +88,8 @@ stateDiagram-v2
         answer_by_random --> [*]: 回答(ターン終了)
     }
     state USER: ユーザーのターン {
-        state if_state <<choice>> 
-        state judge <<choice>> 
+        state if_state <<choice>>
+        state judge <<choice>>
         start: ユーザーが入力する
         validate_alphabet: 先頭文字が正しいか検証
         validate_reuse: 使用済み単語か検証
@@ -118,3 +118,31 @@ stateDiagram-v2
 
 ```
 
+## アプリケーション設計
+
+### 設計パターン
+- サービスオブジェクトパターン: ゲームのロジックをコントローラから分離して `Games::SessionManager` に実装
+- RESTful API: ゲームセッションやプレイヤーの操作をREST APIとして提供
+
+### ディレクトリ構成
+- app/services/games/: ゲーム関連サービスクラス
+- app/controllers/api/: API用コントローラ
+
+## テスト方針
+
+### テストフレームワーク
+- RSpec: テストフレームワークとしてRSpecを使用
+- FactoryBot: テストデータ作成用
+- Shoulda Matchers: アソシエーションやバリデーションのテストを簡潔に記述
+- DatabaseCleaner: テスト間のデータ分離
+
+### テスト構成
+- モデルテスト (spec/models/): 各モデルのバリデーション、リレーション、スコープのテスト
+- コントローラテスト (spec/controllers/): APIコントローラのエンドポイントテスト
+- サービステスト (spec/services/): ゲームロジックのユニットテスト
+- ファクトリ (spec/factories/): テストデータ作成用の定義
+
+### テスト戦略
+- ユニットテスト: モデル、サービス、コントローラごとに独立してテスト
+- 統合テスト: ゲームフローのエンドツーエンド検証（今後実装）
+- テストカバレッジ: モデルとサービスクラスは高いカバレッジを目指す

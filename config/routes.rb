@@ -6,9 +6,21 @@ Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
 
   # Render dynamic PWA files from app/views/pwa/* (remember to link manifest in application.html.erb)
-  # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
-  # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
+  get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
+  get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
+
+  # API routes
+  namespace :api do
+    resources :games, only: [:index, :create] do
+      collection do
+        get :current, action: :show
+        post :submit_word
+        post :timeout
+      end
+    end
+  end
 
   # Defines the root path route ("/")
-  # root "posts#index"
+  # TODO: 実際のゲーム画面コントローラを作成後に正しいパスへ変更する
+  # root "games#index"
 end
