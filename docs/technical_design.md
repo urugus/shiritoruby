@@ -42,6 +42,7 @@ erDiagram
     words {
         UUID id PK
         STRING word 
+        STRING category NOT NULL
         ENUM category NOT NULL
         STRING description  NOT NULL
         TIMESTAMP created_at DEFAULT now()
