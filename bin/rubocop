@@ -1,8 +1,10 @@
-#!/usr/bin/env ruby
-require "rubygems"
-require "bundler/setup"
+#!/usr/bin/env bash
+set -e
 
-# explicit rubocop config increases performance slightly while avoiding config confusion.
-ARGV.unshift("--config", File.expand_path("../.rubocop.yml", __dir__))
-
-load Gem.bin_path("rubocop", "rubocop")
+# rbenvを使用している場合は、適切なRubyバージョンを自動的に使用する
+if command -v rbenv &> /dev/null; then
+  exec rbenv exec bundle exec rubocop --config "$(dirname "$0")/../.rubocop.yml" "$@"
+else
+  # rbenvが無い場合は標準的な方法で実行
+  exec bundle exec rubocop --config "$(dirname "$0")/../.rubocop.yml" "$@"
+fi
