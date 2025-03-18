@@ -6,3 +6,10 @@ inherit_gem: { rubocop-rails-omakase: rubocop.yml }
 # # Use `[a, [b, c]]` not `[ a, [ b, c ] ]`
 # Layout/SpaceInsideArrayLiteralBrackets:
 #   Enabled: false
+
+# JavaScriptファイルを検査から除外
+AllCops:
+  Exclude:
+    - 'app/javascript/**/*.js'
+    - 'node_modules/**/*'
+    - 'vendor/**/*'
