@@ -1,0 +1,112 @@
+<% content_for :title, "Shiritoruby - ランキング" %>
+
+<div class="ranking-container">
+  <header class="game-header">
+    <h1>ShiritoRuby</h1>
+    <p class="subtitle">ランキング</p>
+  </header>
+
+  <div class="ranking-content">
+    <div class="ranking-nav">
+      <a href="<%= root_path %>" class="back-to-game">ゲームに戻る</a>
+
+      <!-- フィルターとソートのフォーム -->
+      <div class="ranking-filter">
+        <%= form_with url: rankings_path, method: :get, class: "filter-form", data: { turbo: false } do |form| %>
+          <div class="filter-group">
+            <%= form.label :period, "期間:" %>
+            <%= form.select :period,
+              options_for_select([
+                ["すべて", 0],
+                ["1日", 1],
+                ["7日", 7],
+                ["30日", 30]
+              ], selected: @period),
+              {}, { class: "filter-select", onchange: "this.form.submit()" } %>
+          </div>
+
+          <div class="filter-group">
+            <%= form.label :sort_by, "並び順:" %>
+            <%= form.select :sort_by,
+              options_for_select([
+                ["スコア順", "score"],
+                ["プレイ時間順", "time"],
+                ["新しい順", "recent"]
+              ], selected: @sort_by),
+              {}, { class: "filter-select", onchange: "this.form.submit()" } %>
+          </div>
+
+          <div class="filter-group search-group">
+            <%= form.text_field :player_name, placeholder: "プレイヤー名", value: @player_name, class: "player-search" %>
+            <%= form.submit "検索", class: "search-button" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <% if @period.positive? || @player_name.present? || @sort_by != 'score' %>
+      <div class="active-filters">
+        <div class="filter-label">適用中のフィルター:</div>
+        <div class="filter-tags">
+          <% if @period.positive? %>
+            <span class="filter-tag">
+              期間: <%= {1 => "1日", 7 => "7日", 30 => "30日"}[@period] || "#{@period}日" %>
+              <a href="<%= rankings_path(period: 0, player_name: @player_name, sort_by: @sort_by) %>" class="remove-filter">×</a>
+            </span>
+          <% end %>
+
+          <% if @player_name.present? %>
+            <span class="filter-tag">
+              プレイヤー: <%= @player_name %>
+              <a href="<%= rankings_path(period: @period, player_name: nil, sort_by: @sort_by) %>" class="remove-filter">×</a>
+            </span>
+          <% end %>
+
+          <% if @sort_by != 'score' %>
+            <span class="filter-tag">
+              並び順: <%= {recent: "新しい順", time: "プレイ時間順"}[@sort_by.to_sym] || @sort_by %>
+              <a href="<%= rankings_path(period: @period, player_name: @player_name, sort_by: 'score') %>" class="remove-filter">×</a>
+            </span>
+          <% end %>
+
+          <a href="<%= rankings_path %>" class="clear-all-filters">すべてクリア</a>
+        </div>
+      </div>
+    <% end %>
+
+    <div class="ranking-table-wrapper">
+      <table class="ranking-table">
+        <thead>
+          <tr>
+            <th class="rank-column">順位</th>
+            <th class="player-column">プレイヤー</th>
+            <th class="score-column">スコア</th>
+            <th class="time-column">プレイ時間</th>
+            <th class="date-column">プレイ日時</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @games.each_with_index do |game, index| %>
+            <tr class="<%= index < 3 ? 'top-rank' : '' %>">
+              <td class="rank"><%= index + 1 %></td>
+              <td class="player-name"><%= game.player_name %></td>
+              <td class="score"><%= game.score %></td>
+              <td class="time"><%= format_duration(game.duration_seconds) %></td>
+              <td class="date"><%= game.created_at.strftime('%Y/%m/%d %H:%M') %></td>
+            </tr>
+          <% end %>
+
+          <% if @games.empty? %>
+            <tr>
+              <td colspan="4" class="no-records">まだレコードがありません</td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer class="ranking-footer">
+    <p>Ruby関連の単語でしりとりして、ランキング上位を目指しましょう！</p>
+  </footer>
+</div>

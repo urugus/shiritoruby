@@ -161,7 +161,7 @@
 
 .score-display {
   font-size: 1.5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 .score-label {
@@ -171,6 +171,24 @@
 .score-value {
   font-weight: bold;
   color: var(--primary-color);
+}
+
+.score-details {
+  margin-bottom: 2rem;
+  font-size: 1rem;
+  color: var(--text-color);
+  padding: 0.5rem;
+  background-color: rgba(0, 0, 0, 0.02);
+  border-radius: 4px;
+}
+
+.duration-info, .bonus-info {
+  margin: 0.25rem 0;
+}
+
+.bonus-info {
+  color: var(--success-color);
+  font-weight: bold;
 }
 
 .replay-button {
@@ -198,11 +216,29 @@
   gap: 1rem;
   max-width: 300px;
   margin: 0 auto;
+  margin-bottom: 1rem;
 }
 
 .start-button {
   width: 100%;
   font-size: 1.2rem;
+}
+
+.view-rankings {
+  margin-top: 1rem;
+}
+
+.rankings-link {
+  color: var(--accent-color);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: color 0.2s;
+}
+
+.rankings-link:hover {
+  color: var(--primary-color);
+  text-decoration: underline;
 }
 
 /* ルールセクション */
