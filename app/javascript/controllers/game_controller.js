@@ -256,8 +256,12 @@ export default class extends Controller {
 
     // 単語と番号を表示
     const turnNumber = this.gameState.usedWords.length + 1
-    li.innerHTML = `<span>${turnNumber}. ${word}</span><span>${player === "player" ? "あなた" : "コンピューター"}</span>`
-
+    const turnNumberSpan = document.createElement("span");
+    turnNumberSpan.textContent = `${turnNumber}. ${word}`;
+    const playerSpan = document.createElement("span");
+    playerSpan.textContent = player === "player" ? "あなた" : "コンピューター";
+    li.appendChild(turnNumberSpan);
+    li.appendChild(playerSpan);
     this.wordListTarget.appendChild(li)
 
     // 最新の単語が見えるようにスクロール
