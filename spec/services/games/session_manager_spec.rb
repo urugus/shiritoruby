@@ -1,5 +1,3 @@
-require 'rails_helper'
-
 RSpec.describe Games::SessionManager do
   let(:player_name) { 'テストプレイヤー' }
   let(:session_manager) { described_class.new(player_name) }

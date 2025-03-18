@@ -1,5 +1,3 @@
-require 'rails_helper'
-
 RSpec.describe Word, type: :model do
   # アソシエーションのテスト
   describe 'associations' do
