@@ -9,16 +9,16 @@ module Games
 
     # ゲームの状態を表す定数
     GAME_STATE = {
-      waiting_for_player: 'waiting_for_player',
-      player_turn: 'player_turn',
-      computer_turn: 'computer_turn',
-      game_over: 'game_over'
+      waiting_for_player: "waiting_for_player",
+      player_turn: "player_turn",
+      computer_turn: "computer_turn",
+      game_over: "game_over"
     }.freeze
 
     # ゲームの終了理由
     GAME_END_REASON = {
-      computer_surrender: 'computer_surrender',
-      player_timeout: 'player_timeout'
+      computer_surrender: "computer_surrender",
+      player_timeout: "player_timeout"
     }.freeze
 
     attr_reader :game, :current_state, :last_word, :time_limit, :end_reason
@@ -50,7 +50,7 @@ module Games
     # @param word [String] プレイヤーが入力した単語
     # @return [Hash] ターン処理結果
     def player_turn(word)
-      raise GameSessionError, '現在はプレイヤーのターンではありません' unless @current_state == GAME_STATE[:player_turn]
+      raise GameSessionError, "現在はプレイヤーのターンではありません" unless @current_state == GAME_STATE[:player_turn]
 
       word = word.downcase.strip
 
@@ -58,11 +58,11 @@ module Games
       validate_word(word)
 
       # DBから単語を検索
-      word_record = Word.find_by('LOWER(word) = ?', word)
+      word_record = Word.find_by("LOWER(word) = ?", word)
 
       if word_record.nil?
         # TODO: 単語がDBに存在しない場合はOpenAI APIで検証する処理を実装
-        raise InvalidWordError, 'その単語はRuby関連の単語ではありません'
+        raise InvalidWordError, "その単語はRuby関連の単語ではありません"
       end
 
       # ゲームに単語を記録
@@ -85,7 +85,7 @@ module Games
     # @return [Hash] コンピューターの応答結果
     def computer_turn
       unless @current_state == GAME_STATE[:computer_turn]
-        raise GameSessionError, '現在はコンピューターのターンではありません'
+        raise GameSessionError, "現在はコンピューターのターンではありません"
       end
 
       last_letter = @last_word[-1]
@@ -163,7 +163,7 @@ module Games
     # @param word [String] 検証する単語
     def validate_word(word)
       # 2文字以上の単語かチェック
-      raise InvalidWordError, '単語は2文字以上である必要があります' if word.length < 2
+      raise InvalidWordError, "単語は2文字以上である必要があります" if word.length < 2
 
       # 使用済み単語かチェック
       if @used_words.any? { |w| w.downcase == word.downcase }

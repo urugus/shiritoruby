@@ -38,7 +38,7 @@ RSpec.describe GameWord, type: :model do
       let!(:game_word2) { create(:game_word, game: game, turn: 2) }
 
       it 'ターン順に並べる' do
-        expect(game.game_words.by_turn_order).to eq([game_word1, game_word2, game_word3])
+        expect(game.game_words.by_turn_order).to eq([ game_word1, game_word2, game_word3 ])
       end
     end
   end

@@ -11,7 +11,7 @@ Rails.application.routes.draw do
 
   # API routes
   namespace :api do
-    resources :games, only: [:index, :create] do
+    resources :games, only: [ :index, :create ] do
       collection do
         get :current, action: :show
         post :submit_word

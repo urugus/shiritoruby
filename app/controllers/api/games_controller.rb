@@ -1,6 +1,6 @@
 class Api::GamesController < ApplicationController
   skip_before_action :verify_authenticity_token, if: -> { request.format.json? }
-  before_action :set_session_manager, except: [:create, :index]
+  before_action :set_session_manager, except: [ :create, :index ]
 
   # GET /api/games
   # 直近の高スコアを返す
@@ -22,19 +22,19 @@ class Api::GamesController < ApplicationController
     if @session_manager
       render json: @session_manager.game_state
     else
-      render json: { error: '現在進行中のゲームがありません' }, status: :not_found
+      render json: { error: "現在進行中のゲームがありません" }, status: :not_found
     end
   end
 
   # POST /api/games
   # 新しいゲームを作成
   def create
-    player_name = params[:player_name] || 'ゲスト'
+    player_name = params[:player_name] || "ゲスト"
     @session_manager = Games::SessionManager.new(player_name)
     session[:game_id] = @session_manager.game.id
 
     render json: {
-      message: '新しいゲームを開始しました',
+      message: "新しいゲームを開始しました",
       game: @session_manager.game_state
     }, status: :created
   end
@@ -42,7 +42,7 @@ class Api::GamesController < ApplicationController
   # POST /api/games/submit_word
   # プレイヤーが単語を提出
   def submit_word
-    return render json: { error: '単語が提供されていません' }, status: :bad_request unless params[:word].present?
+    return render json: { error: "単語が提供されていません" }, status: :bad_request unless params[:word].present?
 
     begin
       result = @session_manager.player_turn(params[:word])
@@ -63,11 +63,11 @@ class Api::GamesController < ApplicationController
       result = @session_manager.timeout
       render json: {
         game_over: true,
-        message: '制限時間を超過しました。コンピューターの勝利です。',
+        message: "制限時間を超過しました。コンピューターの勝利です。",
         game: @session_manager.game_state
       }
     else
-      render json: { error: '現在プレイヤーのターンではありません' }, status: :bad_request
+      render json: { error: "現在プレイヤーのターンではありません" }, status: :bad_request
     end
   end
 

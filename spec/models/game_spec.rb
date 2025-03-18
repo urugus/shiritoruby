@@ -22,7 +22,7 @@ RSpec.describe Game, type: :model do
       end
 
       it 'スコアの高い順に並べる' do
-        expect(Game.high_scores).to eq([@game3, @game1, @game2])
+        expect(Game.high_scores).to eq([ @game3, @game1, @game2 ])
       end
     end
 
@@ -34,7 +34,7 @@ RSpec.describe Game, type: :model do
       end
 
       it '作成日時の新しい順に並べる' do
-        expect(Game.recent).to eq([@game2, @game3, @game1])
+        expect(Game.recent).to eq([ @game2, @game3, @game1 ])
       end
     end
   end
