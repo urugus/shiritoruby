@@ -21,6 +21,5 @@ Rails.application.routes.draw do
   end
 
   # Defines the root path route ("/")
-  # TODO: 実際のゲーム画面コントローラを作成後に正しいパスへ変更する
-  # root "games#index"
+  root "games#index"
 end

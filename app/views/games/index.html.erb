@@ -1,0 +1,91 @@
+<% content_for :title, "Shiritoruby - Rubyしりとりゲーム" %>
+
+<div class="game-container" data-controller="game" data-game-timer-duration-value="10">
+  <header class="game-header">
+    <h1>ShiritoRuby</h1>
+    <p class="subtitle">Rubyしりとりゲーム</p>
+  </header>
+
+  <div id="game-area" class="game-area" data-game-target="gameArea">
+    <div class="game-status">
+      <div id="turn-indicator" class="turn-indicator">
+        <span class="turn-label">ターン:</span>
+        <span class="turn-value" data-game-target="turnIndicator">あなた</span>
+      </div>
+      <div id="timer" class="timer">
+        <span class="timer-label">残り時間:</span>
+        <span class="timer-value" data-game-target="timer">10</span>秒
+      </div>
+    </div>
+
+    <div id="word-history" class="word-history">
+      <h2>単語履歴</h2>
+      <ul id="word-list" class="word-list" data-game-target="wordList">
+        <!-- 単語履歴がここに表示されます -->
+      </ul>
+    </div>
+
+    <div id="current-word" class="current-word">
+      <div class="word-display" data-game-target="currentWord">
+        <!-- 最後に使われた単語がここに表示されます -->
+      </div>
+    </div>
+
+    <div id="input-area" class="input-area">
+      <form id="word-form" class="word-form">
+        <input
+          type="text"
+          id="word-input"
+          class="word-input"
+          placeholder="単語を入力してください"
+          autocomplete="off"
+          autofocus
+          data-game-target="wordInput"
+        />
+        <button type="submit" class="submit-button">送信</button>
+      </form>
+      <div id="error-message" class="error-message" data-game-target="errorMessage"></div>
+    </div>
+  </div>
+
+  <div id="game-over" class="game-over hidden" data-game-target="gameOver">
+    <h2 class="result-title">ゲーム終了</h2>
+    <div class="result-message" data-game-target="resultMessage"></div>
+    <div class="score-display">
+      <span class="score-label">スコア:</span>
+      <span class="score-value" data-game-target="finalScore"></span>
+    </div>
+    <button id="replay-button" class="replay-button">もう一度プレイ</button>
+  </div>
+
+  <div id="start-screen" class="start-screen" data-game-target="startScreen">
+    <h2>ShiritoRuby へようこそ！</h2>
+    <p class="game-description">
+      Rubyに関連する単語でしりとりをするゲームです。<br>
+      最後の文字から始まる単語を入力してください。<br>
+      制限時間は各ターン10秒です。
+    </p>
+    <form id="player-form" class="player-form">
+      <input
+        type="text"
+        id="player-name"
+        class="player-name-input"
+        placeholder="プレイヤー名"
+        value="ゲスト"
+        maxlength="20"
+      />
+      <button type="submit" class="start-button">ゲーム開始</button>
+    </form>
+  </div>
+
+  <div class="rules-section">
+    <h3>ルール</h3>
+    <ul class="rules-list">
+      <li>Rubyに関連する単語を使ってしりとりをします</li>
+      <li>最後の文字で始まる単語を入力してください</li>
+      <li>同じ単語は2回使えません</li>
+      <li>制限時間は10秒です</li>
+      <li>コンピューターが単語を見つけられなくなるか、あなたが時間切れになるとゲーム終了です</li>
+    </ul>
+  </div>
+</div>
