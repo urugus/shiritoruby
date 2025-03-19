@@ -192,7 +192,44 @@ export default class extends Controller {
 
     // 結果を表示
     this.resultMessageTarget.textContent = data.message || "ゲーム終了！"
-    this.finalScoreTarget.textContent = data.game.score || 0
+
+    // スコア情報
+    const score = data.game.score || 0
+    this.finalScoreTarget.textContent = score
+
+    // ゲーム時間とタイムボーナスが含まれている場合は表示
+    if (data.game.duration_seconds) {
+      const duration = data.game.duration_seconds
+      const durationText = `プレイ時間: ${this.formatDuration(duration)}`
+
+      // スコア詳細を表示する要素を作成
+      const scoreDetails = document.createElement("div")
+      scoreDetails.className = "score-details"
+      scoreDetails.innerHTML = `
+        <div class="duration-info">${durationText}</div>
+        ${data.time_bonus ? `<div class="bonus-info">タイムボーナス: ×${data.time_bonus}</div>` : ''}
+      `
+
+      // すでに詳細が表示されている場合は置き換え、なければ追加
+      const existingDetails = this.gameOverTarget.querySelector(".score-details")
+      if (existingDetails) {
+        existingDetails.replaceWith(scoreDetails)
+      } else {
+        this.gameOverTarget.querySelector(".score-display").after(scoreDetails)
+      }
+    }
+  }
+
+  // 秒数を「○分○秒」の形式にフォーマット
+  formatDuration(seconds) {
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = seconds % 60
+
+    if (minutes > 0) {
+      return `${minutes}分${remainingSeconds}秒`
+    } else {
+      return `${remainingSeconds}秒`
+    }
   }
 
   // タイマーを開始

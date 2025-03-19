@@ -32,6 +32,7 @@ module Games
       @current_state = GAME_STATE[:waiting_for_player]
       @used_words = []
       @end_reason = nil
+      @start_time = Time.current
       create_game
     end
 
@@ -132,13 +133,37 @@ module Games
       @end_reason = reason
       @current_state = GAME_STATE[:game_over]
 
-      # スコアを更新（ターン数がスコア）
-      @game.update(score: @used_words.length)
+      # ゲーム時間（秒）を計算
+      duration = (Time.current - @start_time).to_i
+
+      # スコア計算（ターン数とゲーム時間を考慮）
+      # 基本スコア = ターン数 * 100（ターンごとに100点）
+      # 時間ボーナス = 最大50%（短時間ほどボーナス大）
+      turn_score = @used_words.length * 100
+
+      # 時間に応じたボーナス係数を計算（ターンあたり平均10秒を基準）
+      # 例：平均5秒/ターンなら1.5倍、平均20秒/ターンなら0.75倍
+      time_bonus = 1.0
+      if @used_words.length > 0 && duration > 0
+        avg_seconds_per_turn = duration.to_f / @used_words.length
+        time_bonus = [ 10.0 / [ avg_seconds_per_turn, 1 ].max, 1.5 ].min
+      end
+
+      # 最終スコア = ターンスコア * 時間ボーナス
+      final_score = (turn_score * time_bonus).to_i
+
+      # ゲーム情報を更新
+      @game.update(
+        score: final_score,
+        duration_seconds: duration
+      )
 
       {
         game_over: true,
         reason: reason,
-        score: @game.score
+        score: @game.score,
+        duration: duration,
+        time_bonus: time_bonus.round(2)
       }
     end
 
