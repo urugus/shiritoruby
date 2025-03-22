@@ -21,6 +21,33 @@
   margin-top: -0.5rem;
 }
 
+/* カウントダウン */
+.countdown {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.9);
+  z-index: 1000;
+}
+
+.countdown-number {
+  font-size: 8rem;
+  font-weight: bold;
+  color: var(--primary-color);
+  animation: zoomInOut 1s infinite;
+}
+
+@keyframes zoomInOut {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
 /* ゲームエリア */
 .game-area {
   margin-bottom: 2rem;
