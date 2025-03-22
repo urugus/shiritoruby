@@ -5,6 +5,32 @@ require 'tmpdir'
 require 'json'
 
 namespace :words do
+  RUBY_KEYWORDS = %w[
+    BEGIN END alias and begin break case class def defined? do else elsif end
+    ensure false for if in module next nil not or redo rescue retry return self
+    super then true undef unless until when while yield
+  ].freeze
+
+  desc 'Import Ruby keywords'
+  task import_keywords: :environment do
+    puts 'Importing Ruby keywords...'
+
+    RUBY_KEYWORDS.each do |keyword|
+      begin
+        Word.find_or_create_by!(word: keyword) do |w|
+          w.normalized_word = keyword.downcase
+          w.description = "Ruby keyword: #{get_keyword_description(keyword)}"
+          w.word_type = 'keyword'
+        end
+        print '.'
+      rescue ActiveRecord::RecordInvalid => e
+        puts "\nSkipped '#{keyword}': #{e.message}"
+      end
+    end
+
+    puts "\nKeywords import completed!"
+  end
+
   desc 'Import words from rurema/doctree repository'
   task import_from_doctree: :environment do
     # クローンするリポジトリのURL
@@ -44,6 +70,89 @@ namespace :words do
   end
 
   private
+
+  def get_keyword_description(keyword)
+    case keyword
+    when 'BEGIN'
+      'Runs before the main program execution begins'
+    when 'END'
+      'Runs after the main program execution ends'
+    when 'alias'
+      'Creates an alias for an existing method, operator, or global variable'
+    when 'and'
+      'Logical operator that returns true if both operands are true'
+    when 'begin'
+      'Begins a code block or method definition that may raise an exception'
+    when 'break'
+      'Terminates a loop or switch statement and transfers control'
+    when 'case'
+      'Starts a case expression for pattern matching'
+    when 'class'
+      'Defines a new class'
+    when 'def'
+      'Defines a new method'
+    when 'defined?'
+      'Tests whether a given expression is defined'
+    when 'do'
+      'Starts a block'
+    when 'else'
+      'Alternative condition in if/unless/case statements'
+    when 'elsif'
+      'Alternative condition if previous conditions are false'
+    when 'end'
+      'Ends a code block, class, module, or method definition'
+    when 'ensure'
+      'Ensures that a block of code is always executed'
+    when 'false'
+      'Boolean false value'
+    when 'for'
+      'Loop construct for iterating over a collection'
+    when 'if'
+      'Conditional statement that executes code if condition is true'
+    when 'in'
+      'Used in pattern matching to specify patterns'
+    when 'module'
+      'Defines a module'
+    when 'next'
+      'Jumps to the next iteration of a loop'
+    when 'nil'
+      'Represents absence of a value'
+    when 'not'
+      'Logical operator that returns the opposite of a boolean value'
+    when 'or'
+      'Logical operator that returns true if either operand is true'
+    when 'redo'
+      'Restarts the current iteration of a loop'
+    when 'rescue'
+      'Handles exceptions in begin/end blocks'
+    when 'retry'
+      'Retries a begin/end block after an exception'
+    when 'return'
+      'Returns a value from a method'
+    when 'self'
+      'References the current object'
+    when 'super'
+      'Calls the same method in the parent class'
+    when 'then'
+      'Optional separator in if/when statements'
+    when 'true'
+      'Boolean true value'
+    when 'undef'
+      'Removes a method definition'
+    when 'unless'
+      'Conditional statement that executes code if condition is false'
+    when 'until'
+      'Loop that executes while condition is false'
+    when 'when'
+      'Condition in case statements'
+    when 'while'
+      'Loop that executes while condition is true'
+    when 'yield'
+      'Calls the block passed to a method'
+    else
+      'Ruby language keyword'
+    end
+  end
 
   def extract_words_from_rdoc(base_path)
     words = Set.new

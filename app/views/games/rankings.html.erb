@@ -87,8 +87,9 @@
         </thead>
         <tbody>
           <% @games.each_with_index do |game, index| %>
-            <tr class="<%= index < 3 ? 'top-rank' : '' %>">
-              <td class="rank"><%= index + 1 %></td>
+            <% rank = (@games.current_page - 1) * @games.limit_value + index + 1 %>
+            <tr class="<%= rank <= 3 ? 'top-rank' : '' %>">
+              <td class="rank"><%= rank %></td>
               <td class="player-name"><%= game.player_name %></td>
               <td class="score"><%= game.score %></td>
               <td class="time"><%= format_duration(game.duration_seconds) %></td>
@@ -103,6 +104,14 @@
           <% end %>
         </tbody>
       </table>
+    </div>
+
+    <div class="pagination-wrapper">
+      <%= paginate @games, window: 2, outer_window: 1, params: {
+        period: @period,
+        player_name: @player_name,
+        sort_by: @sort_by
+      } %>
     </div>
   </div>
 

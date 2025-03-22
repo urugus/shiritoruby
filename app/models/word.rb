@@ -8,6 +8,18 @@ class Word < ApplicationRecord
   validates :normalized_word, presence: true, uniqueness: { case_sensitive: false }
   # description は任意
   validates :word, length: { minimum: 2 } # 2文字以上の単語のみ使用可能（要件より）
+  validates :word_type, presence: true, inclusion: {
+    in: %w[method keyword class module gem],
+    message: "%{value} is not a valid word type"
+  }
+
+  # スコープ
+  scope :by_type, ->(type) { where(word_type: type) }
+  scope :methods, -> { where(word_type: 'method') }
+  scope :keywords, -> { where(word_type: 'keyword') }
+  scope :classes, -> { where(word_type: 'class') }
+  scope :modules, -> { where(word_type: 'module') }
+  scope :gems, -> { where(word_type: 'gem') }
 
   # スコープ
   scope :by_first_letter, ->(letter) { where("LOWER(word) LIKE ?", "#{letter.downcase}%") }
