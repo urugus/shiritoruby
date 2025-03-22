@@ -6,7 +6,8 @@ export default class extends Controller {
     "startScreen", "gameArea", "gameOver",
     "wordInput", "wordList", "currentWord",
     "turnIndicator", "timer", "errorMessage",
-    "resultMessage", "finalScore"
+    "resultMessage", "finalScore",
+    "countdown", "countdownNumber"
   ]
 
   static values = {
@@ -69,17 +70,16 @@ export default class extends Controller {
 
       // UIを更新
       this.startScreenTarget.classList.add("hidden")
-      this.gameAreaTarget.classList.remove("hidden")
+      this.countdownTarget.classList.remove("hidden")
       this.gameOverTarget.classList.add("hidden")
       this.wordListTarget.innerHTML = ""
       this.currentWordTarget.textContent = "ゲーム開始！最初の単語を入力してください"
       this.turnIndicatorTarget.textContent = "あなた"
       this.wordInputTarget.value = ""
-      this.wordInputTarget.focus()
       this.errorMessageTarget.textContent = ""
 
-      // タイマーを開始
-      this.startTimer()
+      // カウントダウンを開始
+      this.startCountdown()
     })
     .catch(error => {
       console.error("ゲーム開始エラー:", error)
@@ -308,6 +308,25 @@ export default class extends Controller {
   // エラーメッセージを表示
   showError(message) {
     this.errorMessageTarget.textContent = message
+  }
+
+  // カウントダウンを開始
+  startCountdown() {
+    let count = 3
+    this.countdownNumberTarget.textContent = count
+
+    const countdownInterval = setInterval(() => {
+      count--
+      this.countdownNumberTarget.textContent = count
+
+      if (count <= 0) {
+        clearInterval(countdownInterval)
+        this.countdownTarget.classList.add("hidden")
+        this.gameAreaTarget.classList.remove("hidden")
+        this.wordInputTarget.focus()
+        this.startTimer()
+      }
+    }, 1000)
   }
 
   // CSRFトークンを取得
