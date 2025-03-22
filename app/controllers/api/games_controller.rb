@@ -76,42 +76,45 @@ class Api::GamesController < ApplicationController
   # セッションからゲームセッションマネージャーを取得
   def set_session_manager
     game_id = session[:game_id]
-    return nil unless game_id
+    unless game_id
+      render json: { error: "ゲームセッションが見つかりません" }, status: :not_found
+      return
+    end
 
     game = Game.find_by(id: game_id)
-    return nil unless game
+    unless game
+      render json: { error: "ゲームが見つかりません" }, status: :not_found
+      return
+    end
 
     # 既存のゲームからセッションマネージャーを再構築
-    # 注：実際の実装では、ゲームの状態も再現する必要があります
     @session_manager = Games::SessionManager.new(game.player_name)
     @session_manager.instance_variable_set(:@game, game)
+    @session_manager.instance_variable_set(:@start_time, game.created_at)
 
     # 使用済み単語を復元
     game_words = game.game_words.includes(:word).by_turn_order
-    @session_manager.instance_variable_set(
-      :@used_words,
-      game_words.map { |gw| gw.word.word }
-    )
+    used_words = game_words.map { |gw| gw.word.word }
+    @session_manager.instance_variable_set(:@used_words, used_words)
 
     # 最後に使用した単語を設定
     last_game_word = game_words.last
-    @session_manager.instance_variable_set(
-      :@last_word,
-      last_game_word&.word&.word
-    )
+    last_word = last_game_word&.word&.word
+    @session_manager.instance_variable_set(:@last_word, last_word)
 
     # ゲームの状態を設定
-    if game.game_words.count.odd?
-      @session_manager.instance_variable_set(
-        :@current_state,
-        Games::SessionManager::GAME_STATE[:player_turn]
-      )
+    current_state = if game.game_words.count.odd?
+      Games::SessionManager::GAME_STATE[:player_turn]
     else
-      @session_manager.instance_variable_set(
-        :@current_state,
-        Games::SessionManager::GAME_STATE[:computer_turn]
-      )
+      Games::SessionManager::GAME_STATE[:computer_turn]
     end
+    @session_manager.instance_variable_set(:@current_state, current_state)
+
+    # プレイヤーのターン状態を設定
+    @session_manager.instance_variable_set(
+      :@player_turn,
+      current_state == Games::SessionManager::GAME_STATE[:player_turn]
+    )
 
     @session_manager
   end
