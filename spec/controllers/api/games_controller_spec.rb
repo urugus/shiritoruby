@@ -3,11 +3,11 @@ RSpec.describe Api::GamesController, type: :controller do
 
   before do
     # テスト用の単語を作成
-    @ruby = create(:word, word: 'ruby', category: 'term', description: 'プログラミング言語')
-    @yield = create(:word, word: 'yield', category: 'keyword', description: 'Rubyのキーワード')
-    @do = create(:word, word: 'do', category: 'keyword', description: 'ブロックを開始するキーワード')
-    @open = create(:word, word: 'open', category: 'method', description: 'ファイルを開くメソッド')
-    @net = create(:word, word: 'net', category: 'class_or_module', description: 'ネットワーク関連のモジュール')
+    @ruby = create(:word, word: 'ruby', description: 'プログラミング言語')
+    @yield = create(:word, word: 'yield', description: 'Rubyのキーワード')
+    @do = create(:word, word: 'do', description: 'ブロックを開始するキーワード')
+    @open = create(:word, word: 'open', description: 'ファイルを開くメソッド')
+    @net = create(:word, word: 'net', description: 'ネットワーク関連のモジュール')
   end
 
   describe 'GET #index' do

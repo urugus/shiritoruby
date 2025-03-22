@@ -8,20 +8,9 @@ RSpec.describe Word, type: :model do
   # バリデーションのテスト
   describe 'validations' do
     it { should validate_presence_of(:word) }
-    it { should validate_presence_of(:category) }
+    it { should validate_presence_of(:normalized_word) }
     it { should validate_uniqueness_of(:word).case_insensitive }
     it { should validate_length_of(:word).is_at_least(2) }
-  end
-
-  # enumのテスト
-  describe 'enums' do
-    it { should define_enum_for(:category).with_values(
-      method: 'method',
-      class_or_module: 'class_module',
-      gem: 'gem',
-      term: 'term',
-      keyword: 'keyword'
-    )}
   end
 
   # スコープのテスト

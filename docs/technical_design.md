@@ -9,8 +9,8 @@
 | カラム名     | 型          | 制約                  | 説明                       |
 |-------------|------------|----------------------|--------------------------|
 | id          | UUID       | PRIMARY KEY         | 一意の識別子              |
-| word        | STRING     | UNIQUE, NOT NULL   | 単語（小文字で統一）      |
-| category    | ENUM     | NOT NULL           | 単語の種類（メソッド, クラス, etc.）|
+| word        | STRING     | UNIQUE, NOT NULL   | 単語      |
+| normalized_word        | STRING     | UNIQUE, NOT NULL   | 正規化後の単語（小文字で統一）      |
 | description    | string     | NOT NULL           | 単語に対する説明 |
 | created_at  | TIMESTAMP  | DEFAULT now()      | 作成日時                  |
 | updated_at  | TIMESTAMP  | DEFAULT now()      | 更新日時                  |
@@ -42,8 +42,7 @@ erDiagram
     words {
         UUID id PK
         STRING word
-        STRING category NOT NULL
-        ENUM category NOT NULL
+        STRING normalized_word
         STRING description  NOT NULL
         TIMESTAMP created_at DEFAULT now()
         TIMESTAMP updated_at DEFAULT now()
