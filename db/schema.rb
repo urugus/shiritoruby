@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_03_18_122700) do
+ActiveRecord::Schema[8.0].define(version: 2025_03_22_152126) do
   create_table "game_words", force: :cascade do |t|
     t.integer "game_id", null: false
     t.integer "word_id", null: false
@@ -35,8 +35,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_03_18_122700) do
     t.text "description"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "word_type", default: "method", null: false
     t.index ["normalized_word"], name: "index_words_on_normalized_word", unique: true
     t.index ["word"], name: "index_words_on_word", unique: true
+    t.index ["word_type"], name: "index_words_on_word_type"
   end
 
   add_foreign_key "game_words", "games"

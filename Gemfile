@@ -40,6 +40,9 @@ gem "thruster", require: false
 # HTML parser for web scraping
 gem "nokogiri"
 
+# Pagination
+gem "kaminari"
+
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
 # gem "image_processing", "~> 1.2"
 

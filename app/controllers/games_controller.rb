@@ -28,7 +28,7 @@ class GamesController < ApplicationController
       @games = @games.high_scores
     end
 
-    # 結果を制限
-    @games = @games.limit(50)
+    # ページネーションを適用
+    @games = @games.page(params[:page]).per(20)
   end
 end
