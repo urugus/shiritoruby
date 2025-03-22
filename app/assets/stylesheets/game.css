@@ -162,9 +162,21 @@
 }
 
 .error-message {
-  color: var(--error-color);
   margin-top: 0.5rem;
   min-height: 1.5rem;
+  padding: 8px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.error-message.error {
+  color: #fff;
+  background-color: var(--error-color);
+}
+
+.error-message.info {
+  color: #fff;
+  background-color: var(--accent-color);
 }
 
 /* ゲームオーバー画面 */

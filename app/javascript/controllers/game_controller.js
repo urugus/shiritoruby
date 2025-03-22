@@ -11,22 +11,29 @@ export default class extends Controller {
   ]
 
   static values = {
-    apiUrl: String,
     timerDuration: { type: Number, default: 10 }
   }
 
+  // APIエンドポイントのベースURL
+  get apiBaseUrl() {
+    return "/api/games"
+  }
+
   connect() {
+    this.resetGameState()
+    // イベントリスナーを設定
+    this.setupEventListeners()
+  }
+
+  resetGameState() {
     this.gameState = {
       inProgress: false,
-      playerTurn: false,
+      playerTurn: true,  // プレイヤーから開始するのでtrueに設定
       lastWord: "",
       usedWords: [],
       timerInterval: null,
       timeLeft: this.timerDurationValue
     }
-
-    // イベントリスナーを設定
-    this.setupEventListeners()
   }
 
   setupEventListeners() {
@@ -52,7 +59,7 @@ export default class extends Controller {
   startGame() {
     const playerName = document.getElementById("player-name").value || "ゲスト"
 
-    fetch("/api/games", {
+    fetch(this.apiBaseUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -62,11 +69,8 @@ export default class extends Controller {
     })
     .then(response => response.json())
     .then(data => {
-      // ゲーム状態を初期化
-      this.gameState.inProgress = true
-      this.gameState.playerTurn = true
-      this.gameState.usedWords = []
-      this.gameState.lastWord = ""
+      // ゲーム状態をリセット
+      this.resetGameState()
 
       // UIを更新
       this.startScreenTarget.classList.add("hidden")
@@ -99,7 +103,12 @@ export default class extends Controller {
     // タイマーを停止
     this.stopTimer()
 
-    fetch("/api/games/submit_word", {
+    if (!this.gameState.playerTurn) {
+      this.showError("現在はプレイヤーのターンではありません")
+      return
+    }
+
+    fetch(`${this.apiBaseUrl}/submit_word`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -132,11 +141,17 @@ export default class extends Controller {
       }
 
       // コンピューターの応答を表示
-      if (data.computer_word) {
-        this.addWordToHistory(data.computer_word, "computer")
-        this.currentWordTarget.textContent = data.computer_word
-        this.gameState.lastWord = data.computer_word
-        this.gameState.usedWords.push(data.computer_word.toLowerCase())
+      if (data.computer_response && data.computer_response.valid) {
+        const computerWord = data.computer_response.word
+        this.addWordToHistory(computerWord, "computer")
+        this.currentWordTarget.textContent = computerWord
+        this.gameState.lastWord = computerWord
+        this.gameState.usedWords.push(computerWord.toLowerCase())
+
+        // コンピューターのメッセージを表示（存在する場合）
+        if (data.computer_response.message) {
+          this.showMessage(data.computer_response.message)
+        }
       }
 
       // ターン表示を更新
@@ -163,7 +178,7 @@ export default class extends Controller {
 
   // タイムアウト時の処理
   handleTimeout() {
-    fetch("/api/games/timeout", {
+    fetch(`${this.apiBaseUrl}/timeout`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -234,22 +249,33 @@ export default class extends Controller {
 
   // タイマーを開始
   startTimer() {
-    if (this.gameState.timerInterval) {
-      clearInterval(this.gameState.timerInterval)
+    // ゲームが進行中でない場合は開始しない
+    if (!this.gameState.inProgress) {
+      return
     }
 
+    // 既存のタイマーをクリア
+    this.stopTimer()
+
+    // タイマーの初期化
     this.gameState.timeLeft = this.timerDurationValue
     this.timerTarget.textContent = this.gameState.timeLeft
+    this.timerTarget.classList.remove("time-critical")
 
+    // 新しいタイマーを開始
     this.gameState.timerInterval = setInterval(() => {
+      // ゲームが進行中でない場合はタイマーを停止
+      if (!this.gameState.inProgress) {
+        this.stopTimer()
+        return
+      }
+
       this.gameState.timeLeft -= 1
       this.timerTarget.textContent = this.gameState.timeLeft
 
       // タイマーが0になったらタイムアウト
       if (this.gameState.timeLeft <= 0) {
-        clearInterval(this.gameState.timerInterval)
-        this.gameState.timerInterval = null
-
+        this.stopTimer()
         if (this.gameState.playerTurn) {
           this.handleTimeout()
         }
@@ -283,6 +309,7 @@ export default class extends Controller {
   resetGame() {
     this.gameOverTarget.classList.add("hidden")
     this.startScreenTarget.classList.remove("hidden")
+    this.resetGameState()
     document.getElementById("player-name").focus()
   }
 
@@ -308,6 +335,25 @@ export default class extends Controller {
   // エラーメッセージを表示
   showError(message) {
     this.errorMessageTarget.textContent = message
+    this.errorMessageTarget.classList.add("error")
+
+    // 3秒後にエラーメッセージを消去
+    setTimeout(() => {
+      this.errorMessageTarget.textContent = ""
+      this.errorMessageTarget.classList.remove("error")
+    }, 3000)
+  }
+
+  // 情報メッセージを表示
+  showMessage(message) {
+    this.errorMessageTarget.textContent = message
+    this.errorMessageTarget.classList.add("info")
+
+    // 3秒後にメッセージを消去
+    setTimeout(() => {
+      this.errorMessageTarget.textContent = ""
+      this.errorMessageTarget.classList.remove("info")
+    }, 3000)
   }
 
   // カウントダウンを開始
@@ -324,6 +370,13 @@ export default class extends Controller {
         this.countdownTarget.classList.add("hidden")
         this.gameAreaTarget.classList.remove("hidden")
         this.wordInputTarget.focus()
+
+        // ゲーム状態を更新
+        this.gameState.inProgress = true
+        this.gameState.playerTurn = true
+        this.gameState.timeLeft = this.timerDurationValue
+
+        // タイマーを開始
         this.startTimer()
       }
     }, 1000)
