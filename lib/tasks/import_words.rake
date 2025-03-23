@@ -1,8 +1,8 @@
-require "nokogiri"
-require "open-uri"
-require "fileutils"
-require "tmpdir"
-require "json"
+require 'nokogiri'
+require 'open-uri'
+require 'fileutils'
+require 'tmpdir'
+require 'json'
 
 namespace :words do
   RUBY_KEYWORDS = %w[
@@ -11,18 +11,18 @@ namespace :words do
     super then true undef unless until when while yield
   ].freeze
 
-  desc "Import Ruby keywords"
+  desc 'Import Ruby keywords'
   task import_keywords: :environment do
-    puts "Importing Ruby keywords..."
+    puts 'Importing Ruby keywords...'
 
     RUBY_KEYWORDS.each do |keyword|
       begin
         Word.find_or_create_by!(word: keyword) do |w|
           w.normalized_word = keyword.downcase
           w.description = "Ruby keyword: #{get_keyword_description(keyword)}"
-          w.word_type = "keyword"
+          w.word_type = 'keyword'
         end
-        print "."
+        print '.'
       rescue ActiveRecord::RecordInvalid => e
         puts "\nSkipped '#{keyword}': #{e.message}"
       end
@@ -31,16 +31,16 @@ namespace :words do
     puts "\nKeywords import completed!"
   end
 
-  desc "Import words from rurema/doctree repository"
+  desc 'Import words from rurema/doctree repository'
   task import_from_doctree: :environment do
     # クローンするリポジトリのURL
-    repo_url = "https://github.com/rurema/doctree.git"
+    repo_url = 'https://github.com/rurema/doctree.git'
 
     Dir.mktmpdir do |tmp_dir|
-      puts "Cloning rurema/doctree repository..."
+      puts 'Cloning rurema/doctree repository...'
       system("git clone --depth 1 #{repo_url} #{tmp_dir}")
 
-      puts "Scanning rdoc files..."
+      puts 'Scanning rdoc files...'
       words = extract_words_from_rdoc("#{tmp_dir}/refm/api/src")
 
       puts "Found #{words.length} potential terms"
@@ -50,13 +50,13 @@ namespace :words do
     end
   end
 
-  desc "Update descriptions for Ruby methods from documentation"
+  desc 'Update descriptions for Ruby methods from documentation'
   task update_descriptions: :environment do
-    puts "Updating descriptions from Ruby documentation..."
+    puts 'Updating descriptions from Ruby documentation...'
 
     Dir.mktmpdir do |tmp_dir|
       # ruremaリポジトリをクローン
-      repo_url = "https://github.com/rurema/doctree.git"
+      repo_url = 'https://github.com/rurema/doctree.git'
       system("git clone --depth 1 #{repo_url} #{tmp_dir}")
 
       # メソッドの説明を更新
@@ -73,84 +73,84 @@ namespace :words do
 
   def get_keyword_description(keyword)
     case keyword
-    when "BEGIN"
-      "Runs before the main program execution begins"
-    when "END"
-      "Runs after the main program execution ends"
-    when "alias"
-      "Creates an alias for an existing method, operator, or global variable"
-    when "and"
-      "Logical operator that returns true if both operands are true"
-    when "begin"
-      "Begins a code block or method definition that may raise an exception"
-    when "break"
-      "Terminates a loop or switch statement and transfers control"
-    when "case"
-      "Starts a case expression for pattern matching"
-    when "class"
-      "Defines a new class"
-    when "def"
-      "Defines a new method"
-    when "defined?"
-      "Tests whether a given expression is defined"
-    when "do"
-      "Starts a block"
-    when "else"
-      "Alternative condition in if/unless/case statements"
-    when "elsif"
-      "Alternative condition if previous conditions are false"
-    when "end"
-      "Ends a code block, class, module, or method definition"
-    when "ensure"
-      "Ensures that a block of code is always executed"
-    when "false"
-      "Boolean false value"
-    when "for"
-      "Loop construct for iterating over a collection"
-    when "if"
-      "Conditional statement that executes code if condition is true"
-    when "in"
-      "Used in pattern matching to specify patterns"
-    when "module"
-      "Defines a module"
-    when "next"
-      "Jumps to the next iteration of a loop"
-    when "nil"
-      "Represents absence of a value"
-    when "not"
-      "Logical operator that returns the opposite of a boolean value"
-    when "or"
-      "Logical operator that returns true if either operand is true"
-    when "redo"
-      "Restarts the current iteration of a loop"
-    when "rescue"
-      "Handles exceptions in begin/end blocks"
-    when "retry"
-      "Retries a begin/end block after an exception"
-    when "return"
-      "Returns a value from a method"
-    when "self"
-      "References the current object"
-    when "super"
-      "Calls the same method in the parent class"
-    when "then"
-      "Optional separator in if/when statements"
-    when "true"
-      "Boolean true value"
-    when "undef"
-      "Removes a method definition"
-    when "unless"
-      "Conditional statement that executes code if condition is false"
-    when "until"
-      "Loop that executes while condition is false"
-    when "when"
-      "Condition in case statements"
-    when "while"
-      "Loop that executes while condition is true"
-    when "yield"
-      "Calls the block passed to a method"
+    when 'BEGIN'
+      'Runs before the main program execution begins'
+    when 'END'
+      'Runs after the main program execution ends'
+    when 'alias'
+      'Creates an alias for an existing method, operator, or global variable'
+    when 'and'
+      'Logical operator that returns true if both operands are true'
+    when 'begin'
+      'Begins a code block or method definition that may raise an exception'
+    when 'break'
+      'Terminates a loop or switch statement and transfers control'
+    when 'case'
+      'Starts a case expression for pattern matching'
+    when 'class'
+      'Defines a new class'
+    when 'def'
+      'Defines a new method'
+    when 'defined?'
+      'Tests whether a given expression is defined'
+    when 'do'
+      'Starts a block'
+    when 'else'
+      'Alternative condition in if/unless/case statements'
+    when 'elsif'
+      'Alternative condition if previous conditions are false'
+    when 'end'
+      'Ends a code block, class, module, or method definition'
+    when 'ensure'
+      'Ensures that a block of code is always executed'
+    when 'false'
+      'Boolean false value'
+    when 'for'
+      'Loop construct for iterating over a collection'
+    when 'if'
+      'Conditional statement that executes code if condition is true'
+    when 'in'
+      'Used in pattern matching to specify patterns'
+    when 'module'
+      'Defines a module'
+    when 'next'
+      'Jumps to the next iteration of a loop'
+    when 'nil'
+      'Represents absence of a value'
+    when 'not'
+      'Logical operator that returns the opposite of a boolean value'
+    when 'or'
+      'Logical operator that returns true if either operand is true'
+    when 'redo'
+      'Restarts the current iteration of a loop'
+    when 'rescue'
+      'Handles exceptions in begin/end blocks'
+    when 'retry'
+      'Retries a begin/end block after an exception'
+    when 'return'
+      'Returns a value from a method'
+    when 'self'
+      'References the current object'
+    when 'super'
+      'Calls the same method in the parent class'
+    when 'then'
+      'Optional separator in if/when statements'
+    when 'true'
+      'Boolean true value'
+    when 'undef'
+      'Removes a method definition'
+    when 'unless'
+      'Conditional statement that executes code if condition is false'
+    when 'until'
+      'Loop that executes while condition is false'
+    when 'when'
+      'Condition in case statements'
+    when 'while'
+      'Loop that executes while condition is true'
+    when 'yield'
+      'Calls the block passed to a method'
     else
-      "Ruby language keyword"
+      'Ruby language keyword'
     end
   end
 
@@ -184,7 +184,7 @@ namespace :words do
           w.normalized_word = normalized_word
           w.description = "Ruby standard library term"
         end
-        print "."
+        print '.'
       rescue ActiveRecord::RecordInvalid => e
         puts "\nSkipped '#{word}': #{e.message}"
       end
@@ -192,7 +192,7 @@ namespace :words do
   end
 
   def update_method_descriptions(base_path)
-    puts "Updating method descriptions..."
+    puts 'Updating method descriptions...'
     Word.find_each do |word|
       # メソッド名に対応するドキュメントファイルを検索
       method_files = Dir.glob("#{base_path}/**/*.rd").select do |file|
@@ -207,7 +207,7 @@ namespace :words do
       if (match = content.match(/--- .*#{word.word}.*\n+(.*?)(\n\n|\z)/m))
         description = match[1].strip
         word.update(description: description) unless description.empty?
-        print "."
+        print '.'
       end
     end
   end
@@ -215,18 +215,18 @@ namespace :words do
   def update_gem_descriptions
     puts "\nUpdating gem descriptions..."
     # RubyGemsのAPIから人気のGemを取得
-    gems_url = "https://rubygems.org/api/v1/search.json?query=&page=1&order=downloads"
+    gems_url = 'https://rubygems.org/api/v1/search.json?query=&page=1&order=downloads'
     response = URI.open(gems_url).read
     gems = JSON.parse(response)
 
     gems.each do |gem_info|
-      gem_name = gem_info["name"]
+      gem_name = gem_info['name']
       # gemの名前に対応する単語があれば説明を更新
       if (word = Word.find_by(normalized_word: gem_name.downcase))
         word.update(
           description: "Ruby gem: #{gem_info['info']}"
         )
-        print "."
+        print '.'
       end
     end
   end
