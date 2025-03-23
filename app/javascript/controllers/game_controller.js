@@ -230,7 +230,7 @@ export default class extends Controller {
     const score = data.game.score || 0
     this.finalScoreTarget.textContent = score
 
-    // ゲーム時間が含まれている場合は表示
+    // ゲーム時間とタイムボーナスが含まれている場合は表示
     if (data.game.duration_seconds) {
       const duration = data.game.duration_seconds
       const durationText = `プレイ時間: ${this.formatDuration(duration)}`
@@ -240,6 +240,7 @@ export default class extends Controller {
       scoreDetails.className = "score-details"
       scoreDetails.innerHTML = `
         <div class="duration-info">${durationText}</div>
+        ${data.time_bonus ? `<div class="bonus-info">タイムボーナス: ×${data.time_bonus}</div>` : ''}
       `
 
       // すでに詳細が表示されている場合は置き換え、なければ追加
@@ -337,31 +338,31 @@ export default class extends Controller {
 
     // 単語と番号を表示
     const turnNumber = this.gameState.usedWords.length + 1
-    const turnNumberSpan = document.createElement("span")
-    turnNumberSpan.textContent = `${turnNumber}. ${word}`
-    const playerSpan = document.createElement("span")
-    playerSpan.textContent = player === "player" ? "あなた" : "コンピューター"
-    li.appendChild(turnNumberSpan)
-    li.appendChild(playerSpan)
+    const turnNumberSpan = document.createElement("span");
+    turnNumberSpan.textContent = `${turnNumber}. ${word}`;
+    const playerSpan = document.createElement("span");
+    playerSpan.textContent = player === "player" ? "あなた" : "コンピューター";
+    li.appendChild(turnNumberSpan);
+    li.appendChild(playerSpan);
     this.wordListTarget.appendChild(li)
 
     // 最新の単語が見えるようにスクロール
     this.wordListTarget.scrollTop = this.wordListTarget.scrollHeight
   }
+// エラーメッセージを表示
+showError(message) {
+  this.errorMessageTarget.textContent = message
+  this.errorMessageTarget.classList.add("error")
 
-  // エラーメッセージを表示
-  showError(message) {
-    this.errorMessageTarget.textContent = message
-    this.errorMessageTarget.classList.add("error")
+  // エラーの場合は、現在の単語を更新せず、明確にエラー表示する
+  this.currentWordTarget.innerHTML = `<span class="error-highlight">${this.gameState.lastWord || "ゲーム開始"}</span>`;
 
-    // エラーの場合は、現在の単語を更新せず、明確にエラー表示する
-    this.currentWordTarget.innerHTML = `<span class="error-highlight">${this.gameState.lastWord || "ゲーム開始"}</span>`
-
-    // 5秒後にエラーメッセージを消去（時間を延長）
-    setTimeout(() => {
-      this.errorMessageTarget.textContent = ""
-      this.errorMessageTarget.classList.remove("error")
-    }, 5000)
+  // 5秒後にエラーメッセージを消去（時間を延長）
+  setTimeout(() => {
+    this.errorMessageTarget.textContent = ""
+    this.errorMessageTarget.classList.remove("error")
+  }, 5000)
+}
   }
 
   // 情報メッセージを表示
@@ -374,7 +375,7 @@ export default class extends Controller {
       this.errorMessageTarget.textContent = ""
       this.errorMessageTarget.classList.remove("info")
     }, 3000)
-  }
+  };
 
   // カウントダウンを開始
   startCountdown() {
@@ -400,10 +401,10 @@ export default class extends Controller {
         this.startTimer()
       }
     }, 1000)
-  }
+  };
 
   // CSRFトークンを取得
   getCSRFToken() {
     return document.querySelector('meta[name="csrf-token"]').getAttribute("content")
-  }
+  };
 }

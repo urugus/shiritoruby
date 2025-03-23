@@ -146,7 +146,8 @@ module Games
         game_over: true,
         reason: reason,
         score: @game.score,
-        duration: duration
+        duration: duration,
+        time_bonus: score_info[:time_bonus]
       }
     end
 

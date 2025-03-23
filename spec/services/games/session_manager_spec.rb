@@ -172,6 +172,7 @@ RSpec.describe Games::SessionManager do
       # ScoreCalculatorをモックして、テスト用のスコアを返すようにする
       allow_any_instance_of(Games::ScoreCalculator).to receive(:calculate).and_return({
         score: 200,
+        time_bonus: 1.0,
         turn_score: 200
       })
 
