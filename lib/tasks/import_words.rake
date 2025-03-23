@@ -163,12 +163,18 @@ namespace :words do
 
       # クラス名、モジュール名、メソッド名を抽出
       content.scan(/\b[A-Z][A-Za-z0-9_]*[a-z][A-Za-z0-9_]*\b/).each do |word|
-        words.add(word) if word.match?(/\A[A-Za-z0-9_]+\z/)
+        # 単語の先頭または最後が数字でない場合のみ追加
+        if word.match?(/\A[A-Za-z0-9_]+\z/) && !word.match?(/\A\d/) && !word.match?(/\d\z/)
+          words.add(word)
+        end
       end
 
       # メソッド名を抽出（例：each_with_index, map!, etc.）
       content.scan(/\b[a-z][a-z0-9_]*[?!=]?\b/).each do |word|
-        words.add(word) if word.match?(/\A[A-Za-z0-9_?!=]+\z/)
+        # 単語の先頭または最後が数字でない場合のみ追加
+        if word.match?(/\A[A-Za-z0-9_?!=]+\z/) && !word.match?(/\A\d/) && !word.match?(/\d\z/)
+          words.add(word)
+        end
       end
     end
 
@@ -177,6 +183,12 @@ namespace :words do
 
   def import_words(words)
     words.each do |word|
+      # 単語の先頭または最後が数字の場合はスキップ
+      if word.match?(/\A\d/) || word.match?(/\d\z/)
+        puts "\nSkipped '#{word}': Word starts or ends with a digit"
+        next
+      end
+
       normalized_word = word.downcase
 
       begin
