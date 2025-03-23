@@ -31,7 +31,7 @@ class Word < ApplicationRecord
     message: "%{value} is not a valid word type"
   }
 
-  # スコープ
+  # 単語タイプに関するスコープ
   scope :by_type, ->(type) { where(word_type: type) }
   scope :methods, -> { where(word_type: "method") }
   scope :keywords, -> { where(word_type: "keyword") }
@@ -39,7 +39,7 @@ class Word < ApplicationRecord
   scope :modules, -> { where(word_type: "module") }
   scope :gems, -> { where(word_type: "gem") }
 
-  # スコープ
+  # 検索・フィルタに関するスコープ
   scope :by_first_letter, ->(letter) { where("LOWER(word) LIKE ?", "#{letter.downcase}%") }
   scope :unused_in_game, ->(game_id) {
     where.not(id: GameWord.where(game_id: game_id).select(:word_id))
