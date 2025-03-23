@@ -1,3 +1,21 @@
+# == Schema Information
+#
+# Table name: words
+#
+#  id              :integer          not null, primary key
+#  word            :string           not null
+#  normalized_word :string           not null
+#  description     :text
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
+#  word_type       :string           default("method"), not null
+#
+# Indexes
+#
+#  index_words_on_normalized_word  (normalized_word) UNIQUE
+#  index_words_on_word             (word) UNIQUE
+#  index_words_on_word_type        (word_type)
+#
 class Word < ApplicationRecord
   # アソシエーション
   has_many :game_words, dependent: :destroy

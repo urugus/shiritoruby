@@ -1,3 +1,14 @@
+# == Schema Information
+#
+# Table name: games
+#
+#  id               :integer          not null, primary key
+#  player_name      :string           not null
+#  score            :integer          not null
+#  created_at       :datetime         not null
+#  updated_at       :datetime         not null
+#  duration_seconds :integer
+#
 class Game < ApplicationRecord
   # アソシエーション
   has_many :game_words, dependent: :destroy
