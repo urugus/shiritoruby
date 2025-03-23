@@ -44,6 +44,7 @@ module Games
         score: 0
       )
       @current_state = GAME_STATE[:player_turn]
+      @player_turn = true
       @game
     end
 
@@ -71,6 +72,7 @@ module Games
 
       # コンピューターのターンに変更
       @current_state = GAME_STATE[:computer_turn]
+      @player_turn = false
 
       # コンピューターの応答を準備
       computer_response = computer_turn
@@ -112,6 +114,7 @@ module Games
 
       # プレイヤーのターンに変更
       @current_state = GAME_STATE[:player_turn]
+      @player_turn = true
 
       {
         valid: true,

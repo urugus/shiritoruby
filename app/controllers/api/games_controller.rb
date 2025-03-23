@@ -96,17 +96,21 @@ class Api::GamesController < ApplicationController
     game_words = game.game_words.includes(:word).by_turn_order
     used_words = game_words.map { |gw| gw.word.word }
     @session_manager.instance_variable_set(:@used_words, used_words)
-
     # 最後に使用した単語を設定
     last_game_word = game_words.last
     last_word = last_game_word&.word&.word
     @session_manager.instance_variable_set(:@last_word, last_word)
 
     # ゲームの状態を設定
-    current_state = if game.game_words.count.odd?
+    current_state = if game.game_words.count.zero?
+      # 単語がまだない場合（ゲーム開始直後）はプレイヤーのターン
       Games::SessionManager::GAME_STATE[:player_turn]
-    else
+    elsif game.game_words.count.odd?
+      # 単語数が奇数の場合はコンピューターのターン
       Games::SessionManager::GAME_STATE[:computer_turn]
+    else
+      # 単語数が偶数かつ0でない場合はプレイヤーのターン
+      Games::SessionManager::GAME_STATE[:player_turn]
     end
     @session_manager.instance_variable_set(:@current_state, current_state)
 
