@@ -15,11 +15,11 @@ class Word < ApplicationRecord
 
   # スコープ
   scope :by_type, ->(type) { where(word_type: type) }
-  scope :methods, -> { where(word_type: 'method') }
-  scope :keywords, -> { where(word_type: 'keyword') }
-  scope :classes, -> { where(word_type: 'class') }
-  scope :modules, -> { where(word_type: 'module') }
-  scope :gems, -> { where(word_type: 'gem') }
+  scope :methods, -> { where(word_type: "method") }
+  scope :keywords, -> { where(word_type: "keyword") }
+  scope :classes, -> { where(word_type: "class") }
+  scope :modules, -> { where(word_type: "module") }
+  scope :gems, -> { where(word_type: "gem") }
 
   # スコープ
   scope :by_first_letter, ->(letter) { where("LOWER(word) LIKE ?", "#{letter.downcase}%") }
