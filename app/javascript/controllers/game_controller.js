@@ -140,23 +140,39 @@ export default class extends Controller {
         return
       }
 
-      // コンピューターの応答を表示
-      if (data.computer_response && data.computer_response.valid) {
-        const computerWord = data.computer_response.word
-        this.addWordToHistory(computerWord, "computer")
-        this.currentWordTarget.textContent = computerWord
-        this.gameState.lastWord = computerWord
-        this.gameState.usedWords.push(computerWord.toLowerCase())
+      // コンピューターの応答を処理
+      if (data.computer_response) {
+        if (data.computer_response.surrender) {
+          // コンピューターが投了した場合
+          this.handleGameOver({
+            game_over: true,
+            message: data.computer_response.message || "コンピューターが投了しました。あなたの勝ちです！",
+            game: data.game
+          })
+          return
+        } else if (data.computer_response.valid) {
+          // コンピューターが有効な応答をした場合
+          const computerWord = data.computer_response.word
+          this.addWordToHistory(computerWord, "computer")
+          this.currentWordTarget.textContent = computerWord
+          this.gameState.lastWord = computerWord
+          this.gameState.usedWords.push(computerWord.toLowerCase())
 
-        // コンピューターのメッセージを表示（存在する場合）
-        if (data.computer_response.message) {
-          this.showMessage(data.computer_response.message)
+          // コンピューターのメッセージを表示（存在する場合）
+          if (data.computer_response.message) {
+            this.showMessage(data.computer_response.message)
+          }
+
+          // ターン表示を更新
+          this.turnIndicatorTarget.textContent = "あなた"
+          this.gameState.playerTurn = true
         }
+      } else {
+        // エラーまたは想定外の応答
+        this.showError("コンピューターからの応答がありませんでした")
+        this.turnIndicatorTarget.textContent = "あなた"
+        this.gameState.playerTurn = true
       }
-
-      // ターン表示を更新
-      this.turnIndicatorTarget.textContent = "あなた"
-      this.gameState.playerTurn = true
 
       // タイマーをリセットして再開
       this.resetTimer()
@@ -168,9 +184,11 @@ export default class extends Controller {
     .catch(error => {
       console.error("単語送信エラー:", error)
       this.showError(error.message)
+      this.wordInputTarget.value = "" // エラー発生時に入力をクリア
       this.wordInputTarget.focus()
 
-      // タイマーを再開
+      // 単語がDBにない場合は、単語履歴やゲーム状態を更新しない
+      // タイマーのみ再開
       this.resetTimer()
       this.startTimer()
     })
@@ -331,17 +349,20 @@ export default class extends Controller {
     // 最新の単語が見えるようにスクロール
     this.wordListTarget.scrollTop = this.wordListTarget.scrollHeight
   }
+// エラーメッセージを表示
+showError(message) {
+  this.errorMessageTarget.textContent = message
+  this.errorMessageTarget.classList.add("error")
 
-  // エラーメッセージを表示
-  showError(message) {
-    this.errorMessageTarget.textContent = message
-    this.errorMessageTarget.classList.add("error")
+  // エラーの場合は、現在の単語を更新せず、明確にエラー表示する
+  this.currentWordTarget.innerHTML = `<span class="error-highlight">${this.gameState.lastWord || "ゲーム開始"}</span>`;
 
-    // 3秒後にエラーメッセージを消去
-    setTimeout(() => {
-      this.errorMessageTarget.textContent = ""
-      this.errorMessageTarget.classList.remove("error")
-    }, 3000)
+  // 5秒後にエラーメッセージを消去（時間を延長）
+  setTimeout(() => {
+    this.errorMessageTarget.textContent = ""
+    this.errorMessageTarget.classList.remove("error")
+  }, 5000)
+}
   }
 
   // 情報メッセージを表示
@@ -354,7 +375,7 @@ export default class extends Controller {
       this.errorMessageTarget.textContent = ""
       this.errorMessageTarget.classList.remove("info")
     }, 3000)
-  }
+  };
 
   // カウントダウンを開始
   startCountdown() {
@@ -380,10 +401,10 @@ export default class extends Controller {
         this.startTimer()
       }
     }, 1000)
-  }
+  };
 
   // CSRFトークンを取得
   getCSRFToken() {
     return document.querySelector('meta[name="csrf-token"]').getAttribute("content")
-  }
+  };
 }
