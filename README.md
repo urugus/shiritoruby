@@ -58,7 +58,14 @@ bin/rails s
 ## テスト
 
 ```bash
-bundle exec rspec
+rspec
+```
+
+## Lint
+
+- auto-correct を利用する
+```bash
+rubocop -a
 ```
 
 ## ライセンス
