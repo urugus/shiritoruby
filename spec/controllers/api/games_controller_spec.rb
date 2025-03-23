@@ -55,7 +55,7 @@ RSpec.describe Api::GamesController, type: :controller do
         expect(response).to have_http_status(:success)
         json_response = JSON.parse(response.body)
         expect(json_response['player_name']).to eq('テストプレイヤー')
-        expect(json_response['state']).to eq(Games::GameState::STATES[:player_turn])
+        expect(json_response['state']).to eq(Games::SessionManager::GAME_STATE[:player_turn])
       end
     end
 
@@ -99,16 +99,9 @@ RSpec.describe Api::GamesController, type: :controller do
 
     context '不正な単語が提出された場合' do
       it 'エラーを返す' do
-        # 新しいゲームを作成
-        post :create, params: { player_name: 'テストプレイヤー' }, format: :json
-
-        # セッションマネージャをモックで置き換えずに、実際のセッションマネージャに対して
-        # 例外を発生させるようにする
-        allow_any_instance_of(Games::SessionManager).to receive(:player_turn).and_raise(
-          Games::SessionManager::InvalidFirstLetterError, "単語は'y'で始まる必要があります"
-        )
-
-        # 不正な単語を提出
+        # まず有効な単語を提出
+        post :submit_word, params: { word: 'ruby' }, format: :json
+        # コンピュータの応答後、不正な単語を提出（先頭文字が一致しない）
         post :submit_word, params: { word: 'do' }, format: :json
 
         expect(response).to have_http_status(:unprocessable_entity)
@@ -133,14 +126,8 @@ RSpec.describe Api::GamesController, type: :controller do
     end
 
     it 'プレイヤーのターンでない場合はエラーを返す' do
-      # 新しいゲームを作成
-      post :create, params: { player_name: 'テストプレイヤー' }, format: :json
-
-      # GameStateがコンピューターターン状態を返すようにモック
-      allow_any_instance_of(Games::SessionManager).to receive(:current_state).and_return(
-        Games::GameState::STATES[:computer_turn]
-      )
-
+      # プレイヤーのターンからコンピューターのターンに切り替え
+      post :submit_word, params: { word: 'ruby' }, format: :json
       post :timeout, format: :json
 
       expect(response).to have_http_status(:bad_request)
