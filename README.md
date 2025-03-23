@@ -41,11 +41,8 @@ bin/rails db:migrate
 
 4. 初期データの準備
 ```bash
-# Rubyドキュメントから単語をインポート
-bundle exec rake words:import_from_doctree
-
-# 単語の説明を更新
-bundle exec rake words:update_descriptions
+# 初期データの投入（単語のインポートと説明の更新を行います）
+bin/rails db:seed
 ```
 
 5. アプリケーションの起動
