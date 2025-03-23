@@ -50,7 +50,7 @@ bundle exec rake words:update_descriptions
 
 5. アプリケーションの起動
 ```bash
-bin/dev
+bin/rails s
 ```
 
 その後、ブラウザで http://localhost:3000 にアクセスしてください。
@@ -58,7 +58,7 @@ bin/dev
 ## テスト
 
 ```bash
-bundle exec rspec
+rspec
 ```
 
 ## ライセンス
