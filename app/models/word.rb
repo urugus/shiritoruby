@@ -15,11 +15,11 @@ class Word < ApplicationRecord
 
   # スコープ
   scope :by_type, ->(type) { where(word_type: type) }
-  scope :methods, -> { where(word_type: 'method') }
-  scope :keywords, -> { where(word_type: 'keyword') }
-  scope :classes, -> { where(word_type: 'class') }
-  scope :modules, -> { where(word_type: 'module') }
-  scope :gems, -> { where(word_type: 'gem') }
+  scope :methods, -> { where(word_type: "method") }
+  scope :keywords, -> { where(word_type: "keyword") }
+  scope :classes, -> { where(word_type: "class") }
+  scope :modules, -> { where(word_type: "module") }
+  scope :gems, -> { where(word_type: "gem") }
 
   # スコープ
   scope :by_first_letter, ->(letter) { where("LOWER(word) LIKE ?", "#{letter.downcase}%") }
@@ -32,8 +32,9 @@ class Word < ApplicationRecord
 
   private
 
-  # 保存前に単語を小文字に変換
+  # 保存前に単語を小文字に変換し、normalized_wordを設定
   def downcase_word
     self.word = word.downcase if word.present?
+    self.normalized_word = word.downcase if word.present?
   end
 end

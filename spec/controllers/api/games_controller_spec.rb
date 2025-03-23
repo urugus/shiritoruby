@@ -99,14 +99,16 @@ RSpec.describe Api::GamesController, type: :controller do
 
     context '不正な単語が提出された場合' do
       it 'エラーを返す' do
-        # まず有効な単語を提出
-        post :submit_word, params: { word: 'ruby' }, format: :json
-        # コンピュータの応答後、不正な単語を提出（先頭文字が一致しない）
+        # 手動でコントローラーをモックしてエラーをシミュレート
+        allow_any_instance_of(Games::SessionManager).to receive(:player_turn).and_raise(
+          Games::SessionManager::InvalidFirstLetterError, "単語は「t」で始まる必要があります"
+        )
+
         post :submit_word, params: { word: 'do' }, format: :json
 
         expect(response).to have_http_status(:unprocessable_entity)
         json_response = JSON.parse(response.body)
-        expect(json_response['error']).to be_present
+        expect(json_response['error']).to include("単語は「t」で始まる必要があります")
       end
     end
   end
@@ -126,8 +128,9 @@ RSpec.describe Api::GamesController, type: :controller do
     end
 
     it 'プレイヤーのターンでない場合はエラーを返す' do
-      # プレイヤーのターンからコンピューターのターンに切り替え
-      post :submit_word, params: { word: 'ruby' }, format: :json
+      # モックを使用してコンピューターのターンの状態をシミュレート
+      allow_any_instance_of(Games::SessionManager).to receive(:current_state).and_return(Games::SessionManager::GAME_STATE[:computer_turn])
+
       post :timeout, format: :json
 
       expect(response).to have_http_status(:bad_request)

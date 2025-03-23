@@ -7,6 +7,8 @@ RSpec.describe Word, type: :model do
 
   # バリデーションのテスト
   describe 'validations' do
+    subject { create(:word, word: 'test_word', normalized_word: 'test_word', word_type: 'method') }
+
     it { should validate_presence_of(:word) }
     it { should validate_presence_of(:normalized_word) }
     it { should validate_uniqueness_of(:word).case_insensitive }

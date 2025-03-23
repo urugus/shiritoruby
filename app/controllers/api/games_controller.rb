@@ -46,7 +46,12 @@ class Api::GamesController < ApplicationController
 
     begin
       result = @session_manager.player_turn(params[:word])
-      render json: result
+      # プレイヤーの入力を処理した後、コンピューターの応答も取得
+      computer_response = @session_manager.computer_turn if @session_manager.current_state == Games::SessionManager::GAME_STATE[:computer_turn]
+
+      render json: result.merge(
+        computer_response: computer_response
+      )
     rescue Games::SessionManager::InvalidWordError,
            Games::SessionManager::WordAlreadyUsedError,
            Games::SessionManager::InvalidFirstLetterError => e
