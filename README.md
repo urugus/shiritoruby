@@ -58,7 +58,7 @@ bin/rails s
 ## テスト
 
 ```bash
-bundle exec rspec
+rspec
 ```
 
 ## ライセンス

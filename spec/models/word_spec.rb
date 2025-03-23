@@ -9,7 +9,11 @@ RSpec.describe Word, type: :model do
   describe 'validations' do
     it { should validate_presence_of(:word) }
     it { should validate_presence_of(:normalized_word) }
-    it { should validate_uniqueness_of(:word).case_insensitive }
+    it do
+      # 事前に有効なレコードを作成してからバリデーションチェック
+      create(:word, word: 'test_word', normalized_word: 'test_word')
+      should validate_uniqueness_of(:word).case_insensitive
+    end
     it { should validate_length_of(:word).is_at_least(2) }
   end
 
