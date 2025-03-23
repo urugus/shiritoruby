@@ -1,3 +1,24 @@
+# == Schema Information
+#
+# Table name: game_words
+#
+#  id         :integer          not null, primary key
+#  game_id    :integer          not null
+#  word_id    :integer          not null
+#  turn       :integer          not null
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#
+# Indexes
+#
+#  index_game_words_on_game_id  (game_id)
+#  index_game_words_on_word_id  (word_id)
+#
+# Foreign Keys
+#
+#  game_id  (game_id => games.id)
+#  word_id  (word_id => words.id)
+#
 class GameWord < ApplicationRecord
   # アソシエーション
   belongs_to :game
