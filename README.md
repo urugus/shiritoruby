@@ -61,6 +61,13 @@ bin/rails s
 rspec
 ```
 
+## Lint
+
+- auto-correct を利用する
+```bash
+rubocop -a
+```
+
 ## ライセンス
 
 MIT License
