@@ -1,19 +1,27 @@
 module Games
   class SessionManager
-    # ゲームセッションのエラー - 互換性のため元のエラークラスを維持
+    # ゲームセッションのエラー
     class GameSessionError < StandardError; end
-
-    # サブクラスのエラーをこのクラスでも利用できるようにする
-    InvalidWordError = WordValidator::InvalidWordError
-    WordAlreadyUsedError = WordValidator::WordAlreadyUsedError
-    InvalidFirstLetterError = WordValidator::InvalidFirstLetterError
+    class InvalidWordError < GameSessionError; end
+    class WordAlreadyUsedError < GameSessionError; end
+    class InvalidFirstLetterError < GameSessionError; end
     class TimeoutError < GameSessionError; end
 
-    # 互換性のための定数エイリアス
-    GAME_STATE = GameState::STATES
-    GAME_END_REASON = GameState::END_REASONS
+    # ゲームの状態を表す定数
+    GAME_STATE = {
+      waiting_for_player: "waiting_for_player",
+      player_turn: "player_turn",
+      computer_turn: "computer_turn",
+      game_over: "game_over"
+    }.freeze
 
-    attr_reader :game, :time_limit
+    # ゲームの終了理由
+    GAME_END_REASON = {
+      computer_surrender: "computer_surrender",
+      player_timeout: "player_timeout"
+    }.freeze
+
+    attr_reader :game, :current_state, :last_word, :time_limit, :end_reason
 
     # 新しいゲームセッションを初期化
     # @param player_name [String] プレイヤー名
@@ -21,12 +29,10 @@ module Games
     def initialize(player_name, time_limit = 10)
       @player_name = player_name
       @time_limit = time_limit
+      @current_state = GAME_STATE[:waiting_for_player]
+      @used_words = []
+      @end_reason = nil
       @start_time = Time.current
-
-      # サブシステムの初期化
-      @game_state = GameState.new
-
-      # ゲームを作成
       create_game
     end
 
@@ -37,16 +43,8 @@ module Games
         player_name: @player_name,
         score: 0
       )
-
-      # 各サブシステムを初期化
-      @word_recorder = WordRecorder.new(@game)
-      @word_validator = WordValidator.new(@word_recorder.used_words)
-      @computer_player = ComputerPlayer.new(@game.id)
-      @score_calculator = ScoreCalculator.new
-
-      # ゲーム状態を更新
-      @game_state.start_game
-
+      @current_state = GAME_STATE[:player_turn]
+      @player_turn = true
       @game
     end
 
@@ -54,12 +52,12 @@ module Games
     # @param word [String] プレイヤーが入力した単語
     # @return [Hash] ターン処理結果
     def player_turn(word)
-      raise GameSessionError, "現在はプレイヤーのターンではありません" unless @game_state.player_turn?
+      raise GameSessionError, "現在はプレイヤーのターンではありません" unless @current_state == GAME_STATE[:player_turn]
 
       word = word.downcase.strip
 
       # 単語の検証
-      @word_validator.validate(word, @word_recorder.last_word)
+      validate_word(word)
 
       # DBから単語を検索
       word_record = Word.find_by("LOWER(word) = ?", word)
@@ -70,10 +68,11 @@ module Games
       end
 
       # ゲームに単語を記録
-      @word_recorder.record(word_record)
+      record_word(word_record)
 
       # コンピューターのターンに変更
-      @game_state.to_computer_turn
+      @current_state = GAME_STATE[:computer_turn]
+      @player_turn = false
 
       # コンピューターの応答を準備
       computer_response = computer_turn
@@ -88,28 +87,34 @@ module Games
     # コンピューターのターンを処理
     # @return [Hash] コンピューターの応答結果
     def computer_turn
-      unless @game_state.computer_turn?
+      unless @current_state == GAME_STATE[:computer_turn]
         raise GameSessionError, "現在はコンピューターのターンではありません"
       end
 
-      # コンピュータの応答を取得
-      response = @computer_player.respond(@word_recorder.last_letter)
+      last_letter = @last_word[-1]
 
-      # 応答がHashの場合、投了を意味する
-      if response.is_a?(Hash) && response[:surrender]
+      # 単語の検索条件：最後の文字から始まり、かつ未使用の単語
+      words = Word.by_first_letter(last_letter).unused_in_game(@game.id)
+
+      if words.empty?
         # コンピューターが応答できない場合は投了
         end_game(GAME_END_REASON[:computer_surrender])
-        return response
+        return {
+          valid: false,
+          surrender: true,
+          message: "コンピューターは#{last_letter}から始まる単語を思いつきませんでした。あなたの勝ちです！"
+        }
       end
 
-      # 選択された単語（Word オブジェクト）
-      computer_word = response
+      # ランダムに単語を選択
+      computer_word = words.sample
 
       # ゲームに単語を記録
-      @word_recorder.record(computer_word)
+      record_word(computer_word)
 
       # プレイヤーのターンに変更
-      @game_state.to_player_turn
+      @current_state = GAME_STATE[:player_turn]
+      @player_turn = true
 
       {
         valid: true,
@@ -120,7 +125,7 @@ module Games
 
     # 時間切れによるゲーム終了処理
     def timeout
-      return unless @game_state.player_turn?
+      return unless @current_state == GAME_STATE[:player_turn]
 
       end_game(GAME_END_REASON[:player_timeout])
     end
@@ -128,17 +133,31 @@ module Games
     # ゲームの終了処理
     # @param reason [String] ゲーム終了の理由
     def end_game(reason)
-      @game_state.end_game(reason)
+      @end_reason = reason
+      @current_state = GAME_STATE[:game_over]
 
       # ゲーム時間（秒）を計算
       duration = (Time.current - @start_time).to_i
 
-      # スコア計算
-      score_info = @score_calculator.calculate(@word_recorder.count, duration)
+      # スコア計算（ターン数とゲーム時間を考慮）
+      # 基本スコア = ターン数 * 100（ターンごとに100点）
+      # 時間ボーナス = 最大50%（短時間ほどボーナス大）
+      turn_score = @used_words.length * 100
+
+      # 時間に応じたボーナス係数を計算（ターンあたり平均10秒を基準）
+      # 例：平均5秒/ターンなら1.5倍、平均20秒/ターンなら0.75倍
+      time_bonus = 1.0
+      if @used_words.length > 0 && duration > 0
+        avg_seconds_per_turn = duration.to_f / @used_words.length
+        time_bonus = [ 10.0 / [ avg_seconds_per_turn, 1 ].max, 1.5 ].min
+      end
+
+      # 最終スコア = ターンスコア * 時間ボーナス
+      final_score = (turn_score * time_bonus).to_i
 
       # ゲーム情報を更新
       @game.update(
-        score: score_info[:score],
+        score: final_score,
         duration_seconds: duration
       )
 
@@ -147,7 +166,7 @@ module Games
         reason: reason,
         score: @game.score,
         duration: duration,
-        time_bonus: score_info[:time_bonus]
+        time_bonus: time_bonus.round(2)
       }
     end
 
@@ -158,25 +177,52 @@ module Games
         id: @game.id,
         player_name: @game.player_name,
         score: @game.score,
-        state: @game_state.current_state,
-        last_word: @word_recorder&.last_word,
-        used_words_count: @word_recorder&.count || 0,
-        game_over: @game_state.game_over?,
-        end_reason: @game_state.end_reason
+        state: @current_state,
+        last_word: @last_word,
+        used_words_count: @used_words.length,
+        game_over: @current_state == GAME_STATE[:game_over],
+        end_reason: @end_reason
       }
     end
 
-    # 互換性のためのメソッド
-    def current_state
-      @game_state.current_state
+    private
+
+    # 単語の検証
+    # @param word [String] 検証する単語
+    def validate_word(word)
+      # 2文字以上の単語かチェック
+      raise InvalidWordError, "単語は2文字以上である必要があります" if word.length < 2
+
+      # 使用済み単語かチェック
+      if @used_words.any? { |w| w.downcase == word.downcase }
+        raise WordAlreadyUsedError, "「#{word}」は既に使用されています"
+      end
+
+      # 前の単語の最後の文字と一致するかチェック（最初のターンを除く）
+      return unless @last_word.present?
+
+      last_char = @last_word[-1]
+      first_char = word[0]
+
+      return unless last_char.downcase != first_char.downcase
+
+      raise InvalidFirstLetterError, "単語は「#{last_char}」で始まる必要があります"
     end
 
-    def last_word
-      @word_recorder&.last_word
-    end
+    # 単語を記録
+    # @param word_record [Word] 記録する単語のレコード
+    def record_word(word_record)
+      turn_number = @used_words.length + 1
 
-    def end_reason
-      @game_state.end_reason
+      game_word = @game.game_words.create!(
+        word: word_record,
+        turn: turn_number
+      )
+
+      @used_words << word_record.word
+      @last_word = word_record.word
+
+      game_word
     end
   end
 end
