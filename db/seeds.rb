@@ -4,6 +4,11 @@
 
 puts "=== シードデータの準備を開始します ==="
 
+# 先頭または末尾が記号の単語を削除
+puts "先頭または末尾が記号の単語を削除しています..."
+invalid_words_count = Word.where("word ~ '^[^a-zA-Z0-9]' OR word ~ '[^a-zA-Z0-9]$'").delete_all
+puts "#{invalid_words_count}件の無効な単語を削除しました"
+
 # Rubyキーワードのインポート
 Rake::Task["words:import_keywords"].invoke
 

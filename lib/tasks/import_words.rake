@@ -163,16 +163,16 @@ namespace :words do
 
       # クラス名、モジュール名、メソッド名を抽出
       content.scan(/\b[A-Z][A-Za-z0-9_]*[a-z][A-Za-z0-9_]*\b/).each do |word|
-        # 単語の先頭または最後が数字でない場合のみ追加
-        if word.match?(/\A[A-Za-z0-9_]+\z/) && !word.match?(/\A\d/) && !word.match?(/\d\z/)
+        # 先頭と末尾が英数字である単語のみ追加
+        if word.match?(/\A[A-Za-z0-9_]+\z/) && word.match?(/\A[A-Za-z]/) && word.match?(/[A-Za-z0-9]\z/)
           words.add(word)
         end
       end
 
       # メソッド名を抽出（例：each_with_index, map!, etc.）
       content.scan(/\b[a-z][a-z0-9_]*[?!=]?\b/).each do |word|
-        # 単語の先頭または最後が数字でない場合のみ追加
-        if word.match?(/\A[A-Za-z0-9_?!=]+\z/) && !word.match?(/\A\d/) && !word.match?(/\d\z/)
+        # 先頭が英数字で、末尾が英数字またはメソッド記号（?!=）である単語のみ追加
+        if word.match?(/\A[A-Za-z0-9_?!=]+\z/) && word.match?(/\A[A-Za-z]/) && word.match?(/[A-Za-z0-9?!=]\z/)
           words.add(word)
         end
       end
@@ -183,9 +183,12 @@ namespace :words do
 
   def import_words(words)
     words.each do |word|
-      # 単語の先頭または最後が数字の場合はスキップ
-      if word.match?(/\A\d/) || word.match?(/\d\z/)
-        puts "\nSkipped '#{word}': Word starts or ends with a digit"
+      # 単語の先頭が英字でない、または末尾が英数字（またはメソッド記号?!=）でない場合はスキップ
+      if !word.match?(/\A[A-Za-z]/)
+        puts "\nSkipped '#{word}': Word does not start with a letter"
+        next
+      elsif !word.match?(/[A-Za-z0-9?!=]\z/)
+        puts "\nSkipped '#{word}': Word ends with an invalid character"
         next
       end
 
@@ -195,6 +198,7 @@ namespace :words do
         Word.find_or_create_by!(word: word) do |w|
           w.normalized_word = normalized_word
           w.description = "Ruby standard library term"
+          w.word_type = "method" # デフォルトとしてmethodタイプを設定
         end
         print "."
       rescue ActiveRecord::RecordInvalid => e
