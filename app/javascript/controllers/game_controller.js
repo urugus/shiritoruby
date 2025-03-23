@@ -201,8 +201,7 @@ export default class extends Controller {
         this.wordInputTarget.focus();
 
         // 単語がDBにない場合は、単語履歴やゲーム状態を更新しない
-        // タイマーのみ再開
-        this.resetTimer();
+        // タイマーを継続（リセットせず再開）
         this.startTimer();
       });
   }
@@ -289,8 +288,7 @@ export default class extends Controller {
     // 既存のタイマーをクリア
     this.stopTimer();
 
-    // タイマーの初期化
-    this.gameState.timeLeft = this.timerDurationValue;
+    // タイマーの表示を更新
     this.timerTarget.textContent = this.gameState.timeLeft;
     this.timerTarget.classList.remove("time-critical");
 
