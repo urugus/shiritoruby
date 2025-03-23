@@ -11,7 +11,7 @@
 - 今回選択したタスクが完了したら、Pull Request を作成する
   - Pull Request 作成には `gh` コマンドを利用することができる
   ```
-  gh pr create --repo urugus/shiritoruby --title "今回の変更の概要" --body "変更の概要"
+  gh pr create --repo https://github.com/urugus/shiritoruby --title "今回の変更の概要" --body "変更の概要"
   ```
   - Pull Request には以下の内容を含めること
     - タイトル: 今回の変更の概要
