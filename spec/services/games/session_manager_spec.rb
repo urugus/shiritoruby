@@ -169,17 +169,13 @@ RSpec.describe Games::SessionManager do
       game_state = session_manager.instance_variable_get(:@game_state)
       game_state.instance_variable_set(:@current_state, Games::GameState::STATES[:player_turn])
 
-      # ScoreCalculatorをモックして、テスト用のスコアを返すようにする
-      allow_any_instance_of(Games::ScoreCalculator).to receive(:calculate).and_return({
-        score: 200,
-        turn_score: 200
-      })
+      # 2つの単語が使用されているので、スコアは2になるはず
 
       result = session_manager.end_game(Games::GameState::END_REASONS[:player_timeout])
 
       expect(session_manager.current_state).to eq(Games::GameState::STATES[:game_over])
       expect(session_manager.end_reason).to eq(Games::GameState::END_REASONS[:player_timeout])
-      expect(session_manager.game.score).to eq(200) # スコア計算による値
+      expect(session_manager.game.score).to eq(2) # 2つの単語が使用されているため
     end
   end
 

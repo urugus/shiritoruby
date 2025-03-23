@@ -42,7 +42,6 @@ module Games
       @word_recorder = WordRecorder.new(@game)
       @word_validator = WordValidator.new(@word_recorder.used_words)
       @computer_player = ComputerPlayer.new(@game.id)
-      @score_calculator = ScoreCalculator.new
 
       # ゲーム状態を更新
       @game_state.start_game
@@ -133,12 +132,12 @@ module Games
       # ゲーム時間（秒）を計算
       duration = (Time.current - @start_time).to_i
 
-      # スコア計算
-      score_info = @score_calculator.calculate(@word_recorder.count, duration)
+      # スコア計算（ターン数をスコアとして使用）
+      score = @word_recorder.count
 
       # ゲーム情報を更新
       @game.update(
-        score: score_info[:score],
+        score: score,
         duration_seconds: duration
       )
 

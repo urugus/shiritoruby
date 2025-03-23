@@ -117,7 +117,6 @@ class Api::GamesController < ApplicationController
     @session_manager.instance_variable_set(:@word_recorder, word_recorder)
     @session_manager.instance_variable_set(:@word_validator, Games::WordValidator.new(used_words))
     @session_manager.instance_variable_set(:@computer_player, Games::ComputerPlayer.new(game.id))
-    @session_manager.instance_variable_set(:@score_calculator, Games::ScoreCalculator.new)
 
     # ゲームの状態を設定
     game_state = Games::GameState.new
