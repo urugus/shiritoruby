@@ -87,10 +87,10 @@ module Games
         raise GameSessionError, "現在はコンピューターのターンではありません"
       end
 
-      last_letter = @last_word[-1]
+      next_starting_letter = get_next_starting_letter(@last_word)
 
-      # 単語の検索条件：最後の文字から始まり、かつ未使用の単語
-      words = Word.by_first_letter(last_letter).unused_in_game(@game.id)
+      # 単語の検索条件：適切な文字から始まり、かつ未使用の単語
+      words = Word.by_first_letter(next_starting_letter).unused_in_game(@game.id)
 
       if words.empty?
         # コンピューターが応答できない場合は投了
@@ -98,7 +98,7 @@ module Games
         return {
           valid: false,
           surrender: true,
-          message: "コンピューターは#{last_letter}から始まる単語を思いつきませんでした。あなたの勝ちです！"
+          message: "コンピューターは#{next_starting_letter}から始まる単語を思いつきませんでした。あなたの勝ちです！"
         }
       end
 
@@ -186,10 +186,27 @@ module Games
         end_reason: @end_reason
       }
     end
+private
 
-    private
+# 次の単語の先頭文字を取得する
+# @param word [String] 現在の単語
+# @return [String] 次の単語の先頭文字
+def get_next_starting_letter(word)
+  # 単語の末尾から遡って最初のアルファベットを探す
+  i = word.length - 1
+  while i >= 0
+    if word[i] =~ /[a-z]/i
+      return word[i]
+    end
+    i -= 1
+  end
+
+  # 見つからない場合は最後の文字を返す（通常はここには到達しない）
+  word[-1]
+end
 
     # 単語の検証
+    # @param word [String] 検証する単語
     # @param word [String] 検証する単語
     def validate_word(word)
       # 2文字以上の単語かチェック
@@ -203,11 +220,11 @@ module Games
       # 前の単語の最後の文字と一致するかチェック（最初のターンを除く）
       return unless @last_word.present?
 
-      last_char = @last_word[-1]
+      next_starting_letter = get_next_starting_letter(@last_word)
       first_char = word[0]
 
-      if last_char.downcase != first_char.downcase
-        raise InvalidFirstLetterError, "単語は「#{last_char}」で始まる必要があります"
+      if next_starting_letter.downcase != first_char.downcase
+        raise InvalidFirstLetterError, "単語は「#{next_starting_letter}」で始まる必要があります"
       end
     end
 

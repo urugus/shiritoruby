@@ -40,6 +40,33 @@ RSpec.describe Games::SessionManager do
       end
     end
 
+    context '前の単語が記号で終わる場合' do
+      before do
+        # 記号で終わる単語を追加
+        @symbol_end_word = create(:word, word: 'class?', description: 'クラスを定義する')
+        @string = create(:word, word: 'string', description: '文字列クラス')
+        @resque = create(:word, word: 'resque', description: 'キュージョブライブラリ')
+
+        # 使用済み単語リストをリセット
+        session_manager.instance_variable_set(:@used_words, [])
+        session_manager.instance_variable_set(:@last_word, 'class?')
+        session_manager.instance_variable_set(:@current_state, Games::SessionManager::GAME_STATE[:player_turn])
+      end
+
+      it '末尾から遡った最初のアルファベットで始まる単語を受け付ける' do
+        # class? の場合、最後のアルファベットは 's' なので、's'で始まる単語を使用
+        result = session_manager.player_turn('string')
+        expect(result[:valid]).to be true
+      end
+
+      it '末尾から遡った最初のアルファベット以外で始まる単語はエラーになる' do
+        expect {
+          # class? の場合、最後のアルファベットは 's' なので、'r'で始まる単語はエラー
+          session_manager.player_turn('resque')
+        }.to raise_error(Games::SessionManager::InvalidFirstLetterError, /単語は「s」で始まる必要があります/)
+      end
+    end
+
     context '2文字未満の単語が入力された場合' do
       it 'InvalidWordErrorを発生させる' do
         expect {
@@ -100,6 +127,31 @@ RSpec.describe Games::SessionManager do
         expect(result[:valid]).to be true
         expect(result[:word]).to be_present
         expect(session_manager.current_state).to eq(Games::SessionManager::GAME_STATE[:player_turn])
+      end
+    end
+
+    context '前の単語が記号で終わる場合' do
+      before do
+        # 使用済み単語リストをリセット
+        session_manager.instance_variable_set(:@used_words, [])
+        # 記号で終わる単語を使用
+        session_manager.instance_variable_set(:@last_word, 'class?')
+        session_manager.instance_variable_set(:@current_state, Games::SessionManager::GAME_STATE[:computer_turn])
+
+        # 's'から始まる単語だけが存在するようにする
+        Word.destroy_all
+        create(:word, word: 'string', description: '文字列クラス')
+      end
+
+      it '末尾から遡った最初のアルファベットで始まる単語を選択する' do
+        # private メソッドをテストするため、send を使用
+        next_letter = session_manager.send(:get_next_starting_letter, 'class?')
+        expect(next_letter).to eq('s')
+
+        # コンピューターが's'から始まる単語（string）を選択できること
+        result = session_manager.computer_turn
+        expect(result[:valid]).to be true
+        expect(result[:word]).to eq('string')
       end
     end
 
