@@ -1,0 +1,19 @@
+# AWSリージョン
+aws_region = "ap-northeast-1"
+
+# アプリケーション名
+app_name = "shiritoruby"
+
+# アプリケーションインスタンス数
+app_count = 1
+
+# ECSタスクのリソース設定
+task_cpu    = "256"
+task_memory = "512"
+
+# データベース設定
+db_username = "dbadmin"
+db_password = "your-secure-password"  # 本番環境では強力なパスワードに変更してください（注意: '/', '@', '"', スペースは使用できません）
+
+# Railsマスターキー
+rails_master_key = "your-rails-master-key"  # config/master.keyの内容を設定してください

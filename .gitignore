@@ -35,3 +35,22 @@
 
 # Ignore master key for decrypting credentials and more.
 /config/master.key
+
+# Terraform関連のファイル
+# ローカルの.terraform ディレクトリ
+.terraform/
+
+# .tfstate ファイル
+*.tfstate
+*.tfstate.*
+
+# 変数値を含むファイル
+terraform.tfvars
+*.tfvars.json
+
+# CLI設定ファイル
+.terraformrc
+terraform.rc
+
+# プロバイダーのプラグインキャッシュ
+.terraform.d/
