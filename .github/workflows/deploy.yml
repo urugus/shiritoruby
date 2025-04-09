@@ -42,7 +42,6 @@ jobs:
             --push \
             .
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
-          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
       - name: Download task definition
         run: |
@@ -72,5 +71,5 @@ jobs:
             --cluster shiritoruby-cluster \
             --task-definition shiritoruby \
             --launch-type FARGATE \
-            --network-configuration "awsvpcConfiguration={subnets=[$(aws ecs describe-services --cluster shiritoruby-cluster --services shiritoruby-service --query 'services[0].networkConfiguration.awsvpcConfiguration.subnets[0]' --output text)],securityGroups=[$(aws ecs describe-services --cluster shiritoruby-cluster --services shiritoruby-service --query 'services[0].networkConfiguration.awsvpcConfiguration.securityGroups[0]' --output text)],assignPublicIp=ENABLED}" \
-            --overrides '{"containerOverrides": [{"name": "shiritoruby", "command": ["./bin/rails", "db:migrate"]}]}'
+            --network-configuration "awsvpcConfiguration={subnets=[ $(aws ecs describe-services --cluster shiritoruby-cluster --services shiritoruby-service --query 'services[0].networkConfiguration.awsvpcConfiguration.subnets[0]' --output text) ],securityGroups=[ $(aws ecs describe-services --cluster shiritoruby-cluster --services shiritoruby-service --query 'services[0].networkConfiguration.awsvpcConfiguration.securityGroups[0]' --output text) ],assignPublicIp=ENABLED}" \
+            --overrides '{"containerOverrides": [ {"name": "shiritoruby", "command": [ "./bin/rails", "db:migrate" ]} ]}'
