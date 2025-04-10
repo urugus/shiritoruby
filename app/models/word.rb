@@ -27,7 +27,7 @@ class Word < ApplicationRecord
   # description は任意
   validates :word, length: { minimum: 2 } # 2文字以上の単語のみ使用可能（要件より）
   validates :word_type, presence: true, inclusion: {
-    in: %w[method keyword class module gem],
+    in: %w[ method keyword class module gem ],
     message: "%{value} is not a valid word type"
   }
 
