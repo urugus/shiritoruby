@@ -108,6 +108,7 @@ class Api::GamesController < ApplicationController
           render json: { error: "セッションデータが無効です" }, status: :unprocessable_entity
           return
         end
+      end
     end
 
     # セッションからゲームIDを取得（URLパラメータからの取得に失敗した場合）
