@@ -18,23 +18,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Get OIDC Token
-        id: get_token
-        uses: actions/id-token@v2
-        with:
-          audience: sts.amazonaws.com
+      # OIDCトークンは permissions: id-token: write で自動的に利用可能になるため、
+      # 明示的なactions/id-tokenステップは不要です
 
-      - name: Debug Token
+      - name: Debug OIDC Context
         run: |
-          echo "Token received: ${{ steps.get_token.outputs.token != '' }}"
-          # トークンのペイロード部分をデコード（セキュリティのため、トークン自体は出力しない）
-          PAYLOAD=$(echo ${{ steps.get_token.outputs.token }} | cut -d. -f2 | base64 -d 2>/dev/null || echo ${{ steps.get_token.outputs.token }} | cut -d. -f2 | base64 -di 2>/dev/null)
-          echo "OIDC Token payload:"
-          echo $PAYLOAD | jq .
-
-          # subクレームを抽出
-          SUB_CLAIM=$(echo $PAYLOAD | jq -r .sub)
-          echo "Sub claim: $SUB_CLAIM"
+          echo "GitHub Actions OIDC is enabled via permissions: id-token: write"
+          echo "Repository: ${{ github.repository }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "Actor: ${{ github.actor }}"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
