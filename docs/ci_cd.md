@@ -34,7 +34,31 @@ CDパイプラインは、`.github/workflows/deploy.yml`で定義されており
 
 ## 必要な設定
 
-### GitHub Secrets
+### OIDC認証（推奨）
+
+GitHub ActionsとAWSの連携には、OpenID Connect（OIDC）を使用した認証方法を推奨します。この方法では、長期的なIAMユーザー認証情報をGitHubに保存する必要がなく、一時的な認証情報を自動的に取得するため、セキュリティが向上します。
+
+#### 必要なAWS設定
+
+Terraformを使用して、以下のリソースを作成します：
+
+1. GitHub OIDC Provider
+2. GitHub Actions用のIAMロール（必要な権限を付与）
+
+これらの設定は`terraform/main.tf`に含まれています。
+
+#### GitHub Secrets
+
+OIDCを使用する場合、以下のGitHub Secretsを設定する必要があります：
+
+1. `AWS_ACCOUNT_ID`: AWSアカウントID
+2. `AWS_REGION`: AWSリージョン（ap-northeast-1）
+
+### IAMユーザー認証（従来の方法）
+
+従来の方法として、IAMユーザーの長期的な認証情報を使用することもできます。
+
+#### GitHub Secrets
 
 CDパイプラインを実行するためには、以下のGitHub Secretsを設定する必要があります：
 
@@ -113,7 +137,7 @@ CDパイプラインを実行するためには、以下のGitHub Secretsを設�
    - このボタンは通常、画面の右上または中央上部にあります。
 
 6. 以下の3つのシークレットをそれぞれ追加します：
-   
+
    a. 1つ目のシークレット：
    - 「Name」欄に: `AWS_ACCESS_KEY_ID`
    - 「Value」欄に: AWSのIAMユーザーのアクセスキーID
@@ -135,6 +159,24 @@ CDパイプラインを実行するためには、以下のGitHub Secretsを設�
 
 これらのシークレットは暗号化されて保存され、GitHub Actionsのワークフロー内でのみ参照できます。値自体はGitHubの管理画面でも表示されないため、セキュリティが確保されています。
 
+### OIDC認証への移行手順
+
+既存のIAMユーザー認証からOIDC認証に移行するには、以下の手順を実行します：
+
+1. Terraformを適用して、OIDCプロバイダーとIAMロールを作成します：
+   ```bash
+   cd terraform
+   AWS_PROFILE=shiritoruby terraform apply
+   ```
+
+2. GitHubリポジトリの「Settings」→「Secrets and variables」→「Actions」で以下のシークレットを設定します：
+   - `AWS_ACCOUNT_ID`: AWSアカウントID
+   - `AWS_REGION`: ap-northeast-1（既存のシークレットを確認）
+
+3. 既存のIAMユーザー認証情報のシークレットは、OIDC認証が正常に機能することを確認した後に削除できます：
+   - `AWS_ACCESS_KEY_ID`
+   - `AWS_SECRET_ACCESS_KEY`
+
 ## デプロイフロー
 
 1. 開発者がfeatureブランチで機能を開発します。
@@ -152,7 +194,9 @@ CDパイプラインを実行するためには、以下のGitHub Secretsを設�
 
 1. GitHub Actionsのログを確認して、エラーメッセージを特定します。
 2. AWS認証情報が正しく設定されていることを確認します。
-3. IAMユーザーに必要な権限が付与されていることを確認します。
+3. 認証方法に応じて確認します：
+   - IAMユーザー認証の場合：IAMユーザーに必要な権限が付与されていることを確認します。
+   - OIDC認証の場合：IAMロールに必要な権限が付与されていることを確認します。
 4. ECRリポジトリ、ECSクラスター、サービス名が正しいことを確認します。
 
 ### アプリケーションが正常に動作しない場合
