@@ -58,3 +58,40 @@ aws ecs run-task \\
   --overrides '{"containerOverrides": [{"name": "${var.app_name}", "command": ["./bin/rails", "db:migrate"]}]}'
 EOF
 }
+
+output "github_actions_role_arn" {
+  description = "The ARN of the IAM role for GitHub Actions OIDC"
+  value       = aws_iam_role.github_actions.arn
+}
+
+output "github_actions_oidc_setup" {
+  description = "Instructions for setting up GitHub Actions OIDC authentication"
+  value       = <<EOF
+# GitHub ActionsでOIDC認証を使用するための設定手順
+
+1. GitHubリポジトリの「Settings」→「Secrets and variables」→「Actions」で以下のシークレットを設定します：
+   - AWS_ACCOUNT_ID: ${data.aws_caller_identity.current.account_id}
+   - AWS_REGION: ${var.aws_region}
+
+2. 既存のIAMユーザー認証情報のシークレットは、OIDC認証が正常に機能することを確認した後に削除できます：
+   - AWS_ACCESS_KEY_ID
+   - AWS_SECRET_ACCESS_KEY
+
+3. GitHub Actionsワークフローファイル（.github/workflows/deploy.yml）が正しく設定されていることを確認します：
+   - permissions セクションに id-token: write と contents: read が含まれていること
+   - aws-actions/configure-aws-credentials@v4 アクションで role-to-assume パラメータが設定されていること
+
+   ```yaml
+   permissions:
+     id-token: write
+     contents: read
+
+   steps:
+     - name: Configure AWS credentials
+       uses: aws-actions/configure-aws-credentials@v4
+       with:
+         role-to-assume: ${aws_iam_role.github_actions.arn}
+         aws-region: $${{ secrets.AWS_REGION }}
+   ```
+EOF
+}
