@@ -27,6 +27,9 @@ export default class extends Controller {
     return "/api/games";
   }
 
+  // セッションIDを保存する
+  sessionId = null;
+
   connect() {
     this.resetGameState();
     // イベントリスナーを設定
@@ -96,6 +99,14 @@ export default class extends Controller {
         return response.json();
       })
       .then((data) => {
+        // セッションIDを保存（レスポンスヘッダーから取得）
+        if (data.session_id) {
+          this.sessionId = data.session_id;
+          console.log("セッションID保存:", this.sessionId);
+        }
+        return data;
+      })
+      .then((data) => {
         // ゲーム状態をリセット
         this.resetGameState();
 
@@ -143,7 +154,12 @@ export default class extends Controller {
       return;
     }
 
-    fetch(`${this.apiBaseUrl}/submit_word`, {
+    // セッションIDをURLパラメータとして追加
+    const url = this.sessionId
+      ? `${this.apiBaseUrl}/submit_word?session_id=${this.sessionId}`
+      : `${this.apiBaseUrl}/submit_word`;
+
+    fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -244,7 +260,12 @@ export default class extends Controller {
 
   // タイムアウト時の処理
   handleTimeout() {
-    fetch(`${this.apiBaseUrl}/timeout`, {
+    // セッションIDをURLパラメータとして追加
+    const url = this.sessionId
+      ? `${this.apiBaseUrl}/timeout?session_id=${this.sessionId}`
+      : `${this.apiBaseUrl}/timeout`;
+
+    fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
