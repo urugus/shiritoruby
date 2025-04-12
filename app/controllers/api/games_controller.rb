@@ -100,9 +100,14 @@ class Api::GamesController < ApplicationController
       # セッションIDからセッションを復元
       session_record = ActiveRecord::SessionStore::Session.find_by(session_id: params[:session_id])
       if session_record && session_record.data.present?
-        session_data = session_record.data
-        game_id = session_data["game_id"]
-      end
+        begin
+          session_data = session_record.data.is_a?(String) ? JSON.parse(session_record.data) : session_record.data
+          game_id = session_data["game_id"]
+        rescue JSON::ParserError => e
+          Rails.logger.error "セッションデータの解析に失敗しました: #{e.message}"
+          render json: { error: "セッションデータが無効です" }, status: :unprocessable_entity
+          return
+        end
     end
 
     # セッションからゲームIDを取得（URLパラメータからの取得に失敗した場合）
