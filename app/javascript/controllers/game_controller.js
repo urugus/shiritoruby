@@ -75,7 +75,14 @@ export default class extends Controller {
       },
       body: JSON.stringify({ player_name: playerName }),
     })
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) {
+          return response.json().then((data) => {
+            throw new Error(data.error || "ゲームの開始に失敗しました");
+          });
+        }
+        return response.json();
+      })
       .then((data) => {
         // ゲーム状態をリセット
         this.resetGameState();
@@ -97,7 +104,8 @@ export default class extends Controller {
       .catch((error) => {
         console.error("ゲーム開始エラー:", error);
         this.showError(
-          "ゲームを開始できませんでした。もう一度お試しください。",
+          error.message ||
+            "ゲームを開始できませんでした。もう一度お試しください。"
         );
       });
   }
@@ -252,7 +260,11 @@ export default class extends Controller {
       scoreDetails.className = "score-details";
       scoreDetails.innerHTML = `
         <div class="duration-info">${durationText}</div>
-        ${data.time_bonus ? `<div class="bonus-info">タイムボーナス: ×${data.time_bonus}</div>` : ""}
+        ${
+          data.time_bonus
+            ? `<div class="bonus-info">タイムボーナス: ×${data.time_bonus}</div>`
+            : ""
+        }
       `;
 
       // すでに詳細が表示されている場合は置き換え、なければ追加
@@ -367,7 +379,9 @@ export default class extends Controller {
     this.errorMessageTarget.classList.add("error");
 
     // エラーの場合は、現在の単語を更新せず、明確にエラー表示する
-    this.currentWordTarget.innerHTML = `<span class="error-highlight">${this.gameState.lastWord || "ゲーム開始"}</span>`;
+    this.currentWordTarget.innerHTML = `<span class="error-highlight">${
+      this.gameState.lastWord || "ゲーム開始"
+    }</span>`;
 
     // 5秒後にエラーメッセージを消去（時間を延長）
     setTimeout(() => {
