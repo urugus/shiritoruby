@@ -77,9 +77,21 @@ export default class extends Controller {
     })
       .then((response) => {
         if (!response.ok) {
-          return response.json().then((data) => {
-            throw new Error(data.error || "ゲームの開始に失敗しました");
-          });
+          // レスポンスのContent-Typeをチェック
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            return response.json().then((data) => {
+              throw new Error(data.error || "ゲームの開始に失敗しました");
+            });
+          } else {
+            // JSONでない場合はテキストとして読み込む
+            return response.text().then((text) => {
+              console.error("非JSONレスポンス:", text);
+              throw new Error(
+                "サーバーからの応答が不正です。管理者に連絡してください。"
+              );
+            });
+          }
         }
         return response.json();
       })
@@ -103,10 +115,14 @@ export default class extends Controller {
       })
       .catch((error) => {
         console.error("ゲーム開始エラー:", error);
+        // より詳細なエラーメッセージを表示
         this.showError(
           error.message ||
             "ゲームを開始できませんでした。もう一度お試しください。"
         );
+        // エラー発生時にスタート画面を表示したままにする
+        this.startScreenTarget.classList.remove("hidden");
+        this.countdownTarget.classList.add("hidden");
       });
   }
 
@@ -137,9 +153,21 @@ export default class extends Controller {
     })
       .then((response) => {
         if (!response.ok) {
-          return response.json().then((data) => {
-            throw new Error(data.error || "単語の送信に失敗しました");
-          });
+          // レスポンスのContent-Typeをチェック
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            return response.json().then((data) => {
+              throw new Error(data.error || "単語の送信に失敗しました");
+            });
+          } else {
+            // JSONでない場合はテキストとして読み込む
+            return response.text().then((text) => {
+              console.error("非JSONレスポンス:", text);
+              throw new Error(
+                "サーバーからの応答が不正です。管理者に連絡してください。"
+              );
+            });
+          }
         }
         return response.json();
       })
@@ -223,7 +251,21 @@ export default class extends Controller {
         "X-CSRF-Token": this.getCSRFToken(),
       },
     })
-      .then((response) => response.json())
+      .then((response) => {
+        // レスポンスのContent-Typeをチェック
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          return response.json();
+        } else {
+          // JSONでない場合はテキストとして読み込む
+          return response.text().then((text) => {
+            console.error("非JSONレスポンス:", text);
+            throw new Error(
+              "サーバーからの応答が不正です。管理者に連絡してください。"
+            );
+          });
+        }
+      })
       .then((data) => {
         if (data.game_over) {
           this.handleGameOver(data);
@@ -231,6 +273,13 @@ export default class extends Controller {
       })
       .catch((error) => {
         console.error("タイムアウト処理エラー:", error);
+        this.showError(
+          "タイムアウト処理中にエラーが発生しました。ゲームをリセットします。"
+        );
+        // エラー発生時にゲームをリセット
+        setTimeout(() => {
+          this.resetGame();
+        }, 3000);
       });
   }
 
