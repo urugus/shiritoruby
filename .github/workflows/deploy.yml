@@ -7,6 +7,7 @@ on:
 permissions:
   id-token: write  # OIDCトークンの取得に必要
   contents: read   # リポジトリのコードを読み取るために必要
+  actions: read    # GitHub Actionsの実行コンテキストへのアクセスに必要
 
 jobs:
   deploy:
@@ -17,17 +18,39 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Debug OIDC claims
+        id: get_id_token
+        uses: actions/checkout@v4
+
+      - name: Get ID Token
+        id: idtoken
+        run: |
+          # GitHub Actionsの組み込み関数を使用してIDトークンを取得
+          TOKEN=$(curl -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | jq -r '.value')
+          if [ -z "$TOKEN" ]; then
+            echo "Failed to get ID token"
+            exit 1
+          fi
+
+          # トークンのペイロード部分をデコード
+          PAYLOAD=$(echo $TOKEN | cut -d. -f2 | base64 -d 2>/dev/null || echo $TOKEN | cut -d. -f2 | base64 -di 2>/dev/null)
+          echo "OIDC Token payload:"
+          echo $PAYLOAD | jq .
+
+          # subクレームを抽出
+          SUB_CLAIM=$(echo $PAYLOAD | jq -r .sub)
+          echo "Sub claim: $SUB_CLAIM"
+          echo "sub_claim=$SUB_CLAIM" >> $GITHUB_OUTPUT
+        env:
+          ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}
+          ACTIONS_ID_TOKEN_REQUEST_URL: ${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-role
           aws-region: ${{ secrets.AWS_REGION }}
           audience: sts.amazonaws.com
-- name: Debug OIDC claims
-  run: |
-    TOKEN=$(curl -H "Authorization: bearer ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}" "${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}&audience=sts.amazonaws.com" | jq -r '.value')
-    echo "OIDC Token payload:"
-    echo "$TOKEN" | cut -d. -f2 | base64 -d 2>/dev/null | jq .
 
 
       - name: Login to Amazon ECR
