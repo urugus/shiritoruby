@@ -4,6 +4,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"  # より安定したバージョンを指定
     }
+    external = {
+      source  = "hashicorp/external"
+      version = "~> 2.3"  # 最新の安定バージョンを指定
+    }
   }
   required_version = ">= 1.0.0"
 }
@@ -233,7 +237,7 @@ resource "aws_secretsmanager_secret" "database_url" {
 }
 
 resource "aws_secretsmanager_secret_version" "database_url" {
-  secret_id = aws_secretsmanager_secret.database_url.id
+  secret_id     = aws_secretsmanager_secret.database_url.id
   secret_string = "postgres://${var.db_username}:${var.db_password}@${aws_db_instance.main.endpoint}/${var.app_name}_production"
 }
 
@@ -289,11 +293,11 @@ resource "aws_iam_role_policy_attachment" "secrets_access" {
 
 # Secrets ManagerのVPCエンドポイント
 resource "aws_vpc_endpoint" "secretsmanager" {
-  vpc_id            = aws_vpc.main.id
-  service_name      = "com.amazonaws.${var.aws_region}.secretsmanager"
-  vpc_endpoint_type = "Interface"
-  subnet_ids        = [aws_subnet.private_1.id, aws_subnet.private_2.id]
-  security_group_ids = [aws_security_group.ecs.id]
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.${var.aws_region}.secretsmanager"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = [aws_subnet.private_1.id, aws_subnet.private_2.id]
+  security_group_ids  = [aws_security_group.ecs.id]
   private_dns_enabled = true
 }
 
@@ -437,11 +441,20 @@ resource "aws_ecs_service" "app" {
   depends_on = [aws_lb_listener.http]
 }
 
+# GitHub OIDC Providerのサムプリントを自動的に取得
+data "external" "github_thumbprint" {
+  program = ["bash", "-c", <<-EOT
+    THUMBPRINT=$(openssl s_client -servername token.actions.githubusercontent.com -showcerts -connect token.actions.githubusercontent.com:443 < /dev/null 2>/dev/null | openssl x509 -fingerprint -sha1 -noout | cut -d '=' -f 2 | tr -d ':' | tr '[:upper:]' '[:lower:]')
+    echo "{\"thumbprint\": \"$THUMBPRINT\"}"
+  EOT
+  ]
+}
+
 # GitHub OIDC Provider
 resource "aws_iam_openid_connect_provider" "github" {
   url             = "https://token.actions.githubusercontent.com"
   client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
+  thumbprint_list = [data.external.github_thumbprint.result.thumbprint]
 }
 
 # GitHub Actions用のIAMロール
@@ -462,7 +475,10 @@ resource "aws_iam_role" "github_actions" {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
           StringLike = {
-            "token.actions.githubusercontent.com:sub" = "repo:urugus/shiritoruby:*"
+            "token.actions.githubusercontent.com:sub" = [
+              "repo:urugus/shiritoruby:ref:refs/heads/main",
+              "repo:urugus/shiritoruby:pull_request"
+            ]
           }
         }
       }
@@ -511,7 +527,7 @@ resource "aws_iam_role_policy" "github_actions_ecr_ecs" {
         Resource = "*"
         Condition = {
           StringLike = {
-            "iam:PassedToService": "ecs-tasks.amazonaws.com"
+            "iam:PassedToService" : "ecs-tasks.amazonaws.com"
           }
         }
       }
