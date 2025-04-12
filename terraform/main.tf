@@ -29,6 +29,28 @@ resource "aws_ecr_repository" "shiritoruby" {
   }
 }
 
+# ECRライフサイクルポリシー（最新の10個のイメージを保持）
+resource "aws_ecr_lifecycle_policy" "shiritoruby" {
+  repository = aws_ecr_repository.shiritoruby.name
+
+  policy = jsonencode({
+    rules = [
+      {
+        rulePriority = 1,
+        description  = "最新の10個のイメージを保持",
+        selection = {
+          tagStatus     = "any",
+          countType     = "imageCountMoreThan",
+          countNumber   = 10
+        },
+        action = {
+          type = "expire"
+        }
+      }
+    ]
+  })
+}
+
 # VPC設定（既存のVPCを使用する場合はこのセクションをコメントアウト）
 resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"

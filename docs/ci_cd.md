@@ -278,3 +278,62 @@ Error: Unsupported deployment controller: ECS
    ```
 
 3. データベースマイグレーションが正常に実行されたことを確認します。
+
+## ECRの管理
+
+### イメージのライフサイクル管理
+
+デプロイごとに新しいDockerイメージがECRリポジトリにプッシュされるため、時間の経過とともにイメージの数が増加します。これにより、以下の問題が発生する可能性があります：
+
+1. ストレージコストの増加
+2. リポジトリ管理の複雑化
+3. AWSのクォータ制限への到達
+
+これらの問題を防ぐため、ECRリポジトリにはライフサイクルポリシーを設定しています。このポリシーにより、最新の10個のイメージのみが保持され、それ以外の古いイメージは自動的に削除されます。
+
+ライフサイクルポリシーの設定は、`terraform/main.tf`で以下のように定義されています：
+
+```terraform
+resource "aws_ecr_lifecycle_policy" "shiritoruby" {
+  repository = aws_ecr_repository.shiritoruby.name
+
+  policy = jsonencode({
+    rules = [
+      {
+        rulePriority = 1,
+        description  = "最新の10個のイメージを保持",
+        selection = {
+          tagStatus     = "any",
+          countType     = "imageCountMoreThan",
+          countNumber   = 10
+        },
+        action = {
+          type = "expire"
+        }
+      }
+    ]
+  })
+}
+```
+
+このポリシーにより、リポジトリ内のイメージ数が10を超えると、最も古いイメージから順に自動的に削除されます。
+
+### 手動でのイメージ管理
+
+必要に応じて、AWS CLIを使用して手動でイメージを管理することもできます：
+
+1. リポジトリ内のイメージを一覧表示：
+   ```bash
+   aws ecr describe-images --repository-name shiritoruby
+   ```
+
+2. 特定のイメージを削除：
+   ```bash
+   aws ecr batch-delete-image --repository-name shiritoruby --image-ids imageTag=<タグ名>
+   ```
+
+3. 未使用のイメージを削除：
+   ```bash
+   aws ecr list-images --repository-name shiritoruby --filter tagStatus=UNTAGGED --query 'imageIds[*]' --output json | \
+   aws ecr batch-delete-image --repository-name shiritoruby --image-ids file://- || true
+   ```
