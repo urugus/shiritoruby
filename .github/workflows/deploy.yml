@@ -108,6 +108,12 @@ jobs:
             --task-definition shiritoruby \
             --query taskDefinition > task-definition.json
 
+      - name: Clean task definition
+        run: |
+          # 不要なプロパティを削除
+          jq 'del(.taskDefinitionArn, .status, .revision, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)' task-definition.json > cleaned-task-definition.json
+          mv cleaned-task-definition.json task-definition.json
+
       - name: Fill in the new image ID in the Amazon ECS task definition
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1.1.0

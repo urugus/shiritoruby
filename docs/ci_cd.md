@@ -199,6 +199,40 @@ CDパイプラインを実行するためには、以下のGitHub Secretsを設�
    - OIDC認証の場合：IAMロールに必要な権限が付与されていることを確認します。
 4. ECRリポジトリ、ECSクラスター、サービス名が正しいことを確認します。
 
+### ECSタスク定義のデプロイエラー
+
+ECSタスク定義をデプロイする際に以下のようなエラーが発生する場合：
+
+```
+Error: Failed to register task definition in ECS: There were 2 validation errors:
+* UnexpectedParameter: Unexpected key 'registeredAt' found in params
+* UnexpectedParameter: Unexpected key 'registeredBy' found in params
+```
+
+これは、`aws ecs describe-task-definition`コマンドで取得したタスク定義に、新しいタスク定義を登録する際には不要（または許可されていない）プロパティが含まれているためです。以下のプロパティが問題になることがあります：
+
+- compatibilities
+- taskDefinitionArn
+- requiresAttributes
+- revision
+- status
+- registeredAt
+- registeredBy
+
+解決策：
+
+1. タスク定義をダウンロードした後、不要なプロパティを削除するステップをワークフローに追加します：
+
+```yaml
+- name: Clean task definition
+  run: |
+    # 不要なプロパティを削除
+    jq 'del(.taskDefinitionArn, .status, .revision, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)' task-definition.json > cleaned-task-definition.json
+    mv cleaned-task-definition.json task-definition.json
+```
+
+2. この修正を`.github/workflows/deploy.yml`ファイルの「Download task definition」ステップの後に追加します。
+
 ### アプリケーションが正常に動作しない場合
 
 1. ECSサービスのログを確認します：
