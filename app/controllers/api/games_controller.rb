@@ -36,7 +36,11 @@ class Api::GamesController < ApplicationController
       session[:game_id] = @session_manager.game.id
 
       # セッションIDをレスポンスに含める
-      session_id = request.session.id
+      session_id = request.session.id.to_s
+
+      # セッションIDの型をログに出力
+      Rails.logger.info "セッションID: #{session_id} (#{session_id.class})"
+
       render json: {
         message: "新しいゲームを開始しました",
         game: @session_manager.game_state,
