@@ -1,5 +1,5 @@
 class Api::GamesController < ApplicationController
-  skip_before_action :verify_authenticity_token, if: -> { request.format.json? || request.headers["Content-Type"]&.include?("application/json") }
+  skip_before_action :verify_authenticity_token
   before_action :set_session_manager, except: [ :create, :index ]
 
   # GET /api/games
@@ -35,9 +35,12 @@ class Api::GamesController < ApplicationController
       @session_manager = Games::SessionManager.new(player_name)
       session[:game_id] = @session_manager.game.id
 
+      # セッションIDをレスポンスに含める
+      session_id = request.session.id
       render json: {
         message: "新しいゲームを開始しました",
-        game: @session_manager.game_state
+        game: @session_manager.game_state,
+        session_id: session_id
       }, status: :created
     rescue => e
       # エラーをログに記録
@@ -92,7 +95,19 @@ class Api::GamesController < ApplicationController
 
   # セッションからゲームセッションマネージャーを取得
   def set_session_manager
-    game_id = session[:game_id]
+    # URLパラメータからセッションIDを取得
+    if params[:session_id].present?
+      # セッションIDからセッションを復元
+      session_record = ActiveRecord::SessionStore::Session.find_by(session_id: params[:session_id])
+      if session_record && session_record.data.present?
+        session_data = session_record.data
+        game_id = session_data["game_id"]
+      end
+    end
+
+    # セッションからゲームIDを取得（URLパラメータからの取得に失敗した場合）
+    game_id ||= session[:game_id]
+
     unless game_id
       render json: { error: "ゲームセッションが見つかりません" }, status: :not_found
       return
