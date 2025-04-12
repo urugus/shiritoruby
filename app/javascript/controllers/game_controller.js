@@ -101,7 +101,8 @@ export default class extends Controller {
       .then((data) => {
         // セッションIDを保存（レスポンスヘッダーから取得）
         if (data.session_id) {
-          this.sessionId = data.session_id;
+          // セッションIDを確実に文字列として扱う
+          this.sessionId = String(data.session_id);
           console.log("セッションID保存:", this.sessionId);
         }
         return data;
@@ -156,7 +157,9 @@ export default class extends Controller {
 
     // セッションIDをURLパラメータとして追加
     const url = this.sessionId
-      ? `${this.apiBaseUrl}/submit_word?session_id=${this.sessionId}`
+      ? `${this.apiBaseUrl}/submit_word?session_id=${encodeURIComponent(
+          this.sessionId
+        )}`
       : `${this.apiBaseUrl}/submit_word`;
 
     fetch(url, {
@@ -262,7 +265,9 @@ export default class extends Controller {
   handleTimeout() {
     // セッションIDをURLパラメータとして追加
     const url = this.sessionId
-      ? `${this.apiBaseUrl}/timeout?session_id=${this.sessionId}`
+      ? `${this.apiBaseUrl}/timeout?session_id=${encodeURIComponent(
+          this.sessionId
+        )}`
       : `${this.apiBaseUrl}/timeout`;
 
     fetch(url, {
