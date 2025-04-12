@@ -39,13 +39,26 @@ module Games
     # ゲームを作成し、初期化する
     # @return [Game] 作成されたゲームのインスタンス
     def create_game
-      @game = Game.create!(
-        player_name: @player_name,
-        score: 0
-      )
-      @current_state = GAME_STATE[:player_turn]
-      @player_turn = true
-      @game
+      begin
+        @game = Game.create!(
+          player_name: @player_name,
+          score: 0
+        )
+        @current_state = GAME_STATE[:player_turn]
+        @player_turn = true
+        @game
+      rescue ActiveRecord::RecordInvalid => e
+        # バリデーションエラーの詳細なメッセージを含める
+        error_message = "ゲームの作成に失敗しました: #{e.message}"
+        Rails.logger.error error_message
+        raise GameSessionError, error_message
+      rescue => e
+        # その他のエラー
+        error_message = "予期せぬエラーが発生しました: #{e.message}"
+        Rails.logger.error error_message
+        Rails.logger.error e.backtrace.join("\n")
+        raise GameSessionError, error_message
+      end
     end
 
     # プレイヤーのターンを処理

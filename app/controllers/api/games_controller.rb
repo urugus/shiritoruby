@@ -30,13 +30,25 @@ class Api::GamesController < ApplicationController
   # 新しいゲームを作成
   def create
     player_name = params[:player_name] || "ゲスト"
-    @session_manager = Games::SessionManager.new(player_name)
-    session[:game_id] = @session_manager.game.id
 
-    render json: {
-      message: "新しいゲームを開始しました",
-      game: @session_manager.game_state
-    }, status: :created
+    begin
+      @session_manager = Games::SessionManager.new(player_name)
+      session[:game_id] = @session_manager.game.id
+
+      render json: {
+        message: "新しいゲームを開始しました",
+        game: @session_manager.game_state
+      }, status: :created
+    rescue => e
+      # エラーをログに記録
+      Rails.logger.error "ゲーム作成エラー: #{e.message}"
+      Rails.logger.error e.backtrace.join("\n")
+
+      # JSONレスポンスを返す
+      render json: {
+        error: "ゲームの作成に失敗しました: #{e.message}"
+      }, status: :unprocessable_entity
+    end
   end
 
   # POST /api/games/submit_word
