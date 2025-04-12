@@ -27,7 +27,7 @@ jobs:
   run: |
     TOKEN=$(curl -H "Authorization: bearer ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}" "${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}&audience=sts.amazonaws.com" | jq -r '.value')
     echo "OIDC Token payload:"
-    echo $TOKEN | cut -d. -f2 | base64 -d 2>/dev/null | jq .
+    echo "$TOKEN" | cut -d. -f2 | base64 -d 2>/dev/null | jq .
 
 
       - name: Login to Amazon ECR
