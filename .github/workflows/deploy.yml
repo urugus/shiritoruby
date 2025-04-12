@@ -18,6 +18,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Get OIDC Token
+        id: get_token
+        uses: actions/id-token@v2
+        with:
+          audience: sts.amazonaws.com
+
+      - name: Debug Token
+        run: |
+          echo "Token received: ${{ steps.get_token.outputs.token != '' }}"
+          # トークンのペイロード部分をデコード（セキュリティのため、トークン自体は出力しない）
+          PAYLOAD=$(echo ${{ steps.get_token.outputs.token }} | cut -d. -f2 | base64 -d 2>/dev/null || echo ${{ steps.get_token.outputs.token }} | cut -d. -f2 | base64 -di 2>/dev/null)
+          echo "OIDC Token payload:"
+          echo $PAYLOAD | jq .
+
+          # subクレームを抽出
+          SUB_CLAIM=$(echo $PAYLOAD | jq -r .sub)
+          echo "Sub claim: $SUB_CLAIM"
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
