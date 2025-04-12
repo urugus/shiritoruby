@@ -1,5 +1,5 @@
 class Api::GamesController < ApplicationController
-  skip_before_action :verify_authenticity_token
+  skip_before_action :verify_authenticity_token, if: -> { request.format.json? || request.headers["Content-Type"]&.include?("application/json") }
   before_action :set_session_manager, except: [ :create, :index ]
 
   # GET /api/games
