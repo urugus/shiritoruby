@@ -201,7 +201,9 @@ CDパイプラインを実行するためには、以下のGitHub Secretsを設�
 
 ### ECSタスク定義のデプロイエラー
 
-ECSタスク定義をデプロイする際に以下のようなエラーが発生する場合：
+ECSタスク定義をデプロイする際に以下のようなエラーが発生する場合があります：
+
+1. 不要なプロパティによるエラー：
 
 ```
 Error: Failed to register task definition in ECS: There were 2 validation errors:
@@ -232,6 +234,36 @@ Error: Failed to register task definition in ECS: There were 2 validation errors
 ```
 
 2. この修正を`.github/workflows/deploy.yml`ファイルの「Download task definition」ステップの後に追加します。
+
+2. デプロイコントローラーのエラー：
+
+```
+Error: Unsupported deployment controller: ECS
+```
+
+これは、GitHub Actionsで使用しているアクションのバージョンが古い場合に発生することがあります。以下のアクションを最新バージョンに更新することで解決できます：
+
+1. `aws-actions/amazon-ecs-render-task-definition`
+2. `aws-actions/amazon-ecs-deploy-task-definition`
+
+例：
+```yaml
+- name: Fill in the new image ID in the Amazon ECS task definition
+  id: task-def
+  uses: aws-actions/amazon-ecs-render-task-definition@v1.7.1
+  with:
+    task-definition: task-definition.json
+    container-name: shiritoruby
+    image: ${{ steps.build-image.outputs.image }}
+
+- name: Deploy Amazon ECS task definition
+  uses: aws-actions/amazon-ecs-deploy-task-definition@v2.3.1
+  with:
+    task-definition: ${{ steps.task-def.outputs.task-definition }}
+    service: shiritoruby-service
+    cluster: shiritoruby-cluster
+    wait-for-service-stability: true
+```
 
 ### アプリケーションが正常に動作しない場合
 
