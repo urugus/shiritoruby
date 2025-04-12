@@ -43,6 +43,14 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
           audience: sts.amazonaws.com
 
+      - name: Debug OIDC Token
+        run: |
+          # AWS認証情報が正常に設定されたことを確認
+          echo "AWS credentials configured: $(aws sts get-caller-identity --query 'Account' --output text)"
+
+          # IAMロールの情報を表示
+          echo "Assumed role: $(aws sts get-caller-identity --query 'Arn' --output text)"
+
 
       - name: Login to Amazon ECR
         id: login-ecr
