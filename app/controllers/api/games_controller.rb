@@ -103,10 +103,8 @@ class Api::GamesController < ApplicationController
       @session_manager = Games::SessionService.retrieve_session_manager(session_id, session)
     rescue Games::SessionService::SessionNotFoundError => e
       render json: { error: e.message }, status: :not_found
-      return
     rescue Games::SessionService::SessionError => e
       render json: { error: e.message }, status: :unprocessable_entity
-      return
     end
   end
 end
