@@ -62,11 +62,25 @@ module Games
       word_record = Word.find_by("LOWER(word) = ?", word.downcase)
 
       if word_record.nil?
-        # TODO: 単語がDBに存在しない場合はOpenAI APIで検証する処理を実装
-        raise InvalidWordError, "その単語はRuby関連の単語ではありません"
+        # DBに存在しない場合の処理
+        if Rails.env.production? && ENV["OPENAI_API_KEY"].present?
+          # OpenAI APIを使用した検証
+          word_record = validate_with_openai(word)
+        else
+          raise InvalidWordError, "その単語はRuby関連の単語ではありません"
+        end
       end
 
       word_record
+    end
+
+    # OpenAI APIを使用して単語を検証する
+    # @param word [String] 検証する単語
+    # @return [Word] 検証された単語オブジェクト
+    def self.validate_with_openai(word)
+      # TODO: OpenAI APIを使用した検証ロジックを実装
+      # 現在はスタブとしてエラーを発生させる
+      raise InvalidWordError, "その単語はRuby関連の単語ではありません"
     end
   end
 end

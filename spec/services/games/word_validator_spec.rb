@@ -59,5 +59,33 @@ RSpec.describe Games::WordValidator do
         described_class.validate_ruby_related('nonexistent')
       }.to raise_error(Games::WordValidator::InvalidWordError)
     end
+
+    context 'OpenAI APIが設定されている場合' do
+      before do
+        # 環境変数をモック
+        allow(Rails.env).to receive(:production?).and_return(true)
+        allow(ENV).to receive(:[]).with('OPENAI_API_KEY').and_return('dummy_key')
+
+        # validate_with_openaiメソッドをモック
+        allow(described_class).to receive(:validate_with_openai).and_return(nil)
+      end
+
+      it 'DBに存在しない単語の場合、OpenAI APIを使用して検証する' do
+        expect(described_class).to receive(:validate_with_openai).with('nonexistent')
+
+        # エラーは発生するが、validate_with_openaiが呼ばれることを確認
+        expect {
+          described_class.validate_ruby_related('nonexistent')
+        }.to raise_error(Games::WordValidator::InvalidWordError)
+      end
+    end
+  end
+
+  describe '.validate_with_openai' do
+    it '現在は実装されておらず、エラーを発生させる' do
+      expect {
+        described_class.validate_with_openai('test')
+      }.to raise_error(Games::WordValidator::InvalidWordError)
+    end
   end
 end

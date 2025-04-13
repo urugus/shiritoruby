@@ -8,8 +8,22 @@ RSpec.describe Game, type: :model do
   # バリデーションのテスト
   describe 'validations' do
     it { should validate_presence_of(:player_name) }
+    it { should validate_length_of(:player_name).is_at_most(50) }
     it { should validate_presence_of(:score) }
     it { should validate_numericality_of(:score).only_integer.is_greater_than_or_equal_to(0) }
+
+    context 'プレイヤー名の形式' do
+      it '英数字と日本語が使用可能' do
+        game = build(:game, player_name: 'テスト Player 123')
+        expect(game).to be_valid
+      end
+
+      it '特殊文字が含まれる場合は無効' do
+        game = build(:game, player_name: 'テスト Player <script>')
+        expect(game).not_to be_valid
+        expect(game.errors[:player_name]).to include('には英数字、日本語、スペースのみ使用できます')
+      end
+    end
   end
 
   # スコープのテスト
