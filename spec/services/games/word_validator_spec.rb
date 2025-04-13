@@ -67,7 +67,7 @@ RSpec.describe Games::WordValidator do
         allow(ENV).to receive(:[]).with('OPENAI_API_KEY').and_return('dummy_key')
 
         # validate_with_openaiメソッドをモック
-        allow(described_class).to receive(:validate_with_openai).and_return(nil)
+        allow(described_class).to receive(:validate_with_openai).and_raise(Games::WordValidator::InvalidWordError, "その単語はRuby関連の単語ではありません")
       end
 
       it 'DBに存在しない単語の場合、OpenAI APIを使用して検証する' do
