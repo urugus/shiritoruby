@@ -133,7 +133,7 @@ RSpec.describe Api::GamesController, type: :controller do
       it 'エラーを返す' do
         # 手動でコントローラーをモックしてエラーをシミュレート
         allow_any_instance_of(Games::SessionManager).to receive(:player_turn).and_raise(
-          Games::SessionManager::InvalidFirstLetterError, "単語は「t」で始まる必要があります"
+          Games::WordValidator::InvalidFirstLetterError, "単語は「t」で始まる必要があります"
         )
 
         post :submit_word, params: { word: 'do' }, format: :json

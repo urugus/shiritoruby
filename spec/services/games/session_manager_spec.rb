@@ -63,7 +63,7 @@ RSpec.describe Games::SessionManager do
         expect {
           # class? の場合、最後のアルファベットは 's' なので、'r'で始まる単語はエラー
           session_manager.player_turn('resque')
-        }.to raise_error(Games::SessionManager::InvalidFirstLetterError, /単語は「s」で始まる必要があります/)
+        }.to raise_error(Games::WordValidator::InvalidFirstLetterError, /単語は「s」で始まる必要があります/)
       end
     end
 
@@ -71,7 +71,7 @@ RSpec.describe Games::SessionManager do
       it 'InvalidWordErrorを発生させる' do
         expect {
           session_manager.player_turn('r')
-        }.to raise_error(Games::SessionManager::InvalidWordError)
+        }.to raise_error(Games::WordValidator::InvalidWordError)
       end
     end
 
@@ -84,7 +84,7 @@ RSpec.describe Games::SessionManager do
       it 'WordAlreadyUsedErrorを発生させる' do
         expect {
           session_manager.player_turn('ruby')
-        }.to raise_error(Games::SessionManager::WordAlreadyUsedError)
+        }.to raise_error(Games::WordValidator::WordAlreadyUsedError)
       end
     end
 
@@ -97,7 +97,7 @@ RSpec.describe Games::SessionManager do
       it 'InvalidFirstLetterErrorを発生させる' do
         expect {
           session_manager.player_turn('do')
-        }.to raise_error(Games::SessionManager::InvalidFirstLetterError)
+        }.to raise_error(Games::WordValidator::InvalidFirstLetterError)
       end
     end
 
@@ -123,9 +123,9 @@ RSpec.describe Games::SessionManager do
     context '応答可能な単語がある場合' do
       it '単語を選択し、プレイヤーのターンに切り替える' do
         result = session_manager.computer_turn
-
         expect(result[:valid]).to be true
         expect(result[:word]).to be_present
+        expect(result[:word_object]).to be_a(Word)
         expect(session_manager.current_state).to eq(Games::SessionManager::GAME_STATE[:player_turn])
       end
     end
@@ -144,14 +144,15 @@ RSpec.describe Games::SessionManager do
       end
 
       it '末尾から遡った最初のアルファベットで始まる単語を選択する' do
-        # private メソッドをテストするため、send を使用
-        next_letter = session_manager.send(:get_next_starting_letter, 'class?')
+        # WordValidatorのメソッドを使用
+        next_letter = Games::WordValidator.get_next_starting_letter('class?')
         expect(next_letter).to eq('s')
 
         # コンピューターが's'から始まる単語（string）を選択できること
         result = session_manager.computer_turn
         expect(result[:valid]).to be true
         expect(result[:word]).to eq('string')
+        expect(result[:word_object]).to be_a(Word)
       end
     end
 
