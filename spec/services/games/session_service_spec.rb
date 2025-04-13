@@ -64,7 +64,7 @@ RSpec.describe Games::SessionService do
 
         expect(result).to be_a(Games::SessionManager)
         expect(result.game.id).to eq(game.id)
-        expect(result.instance_variable_get(:@used_words)).to eq([ 'ruby', 'yield' ])
+        expect(result.instance_variable_get(:@used_words)).to eq(['ruby', 'yield'])
         expect(result.instance_variable_get(:@last_word)).to eq('yield')
         expect(result.instance_variable_get(:@current_state)).to eq(Games::SessionManager::GAME_STATE[:player_turn])
       end

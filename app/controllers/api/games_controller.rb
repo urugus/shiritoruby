@@ -1,6 +1,6 @@
 class Api::GamesController < ApplicationController
   skip_before_action :verify_authenticity_token
-  before_action :set_session_manager, except: [ :create, :index ]
+  before_action :set_session_manager, except: [:create, :index]
 
   # GET /api/games
   # 直近の高スコアを返す
