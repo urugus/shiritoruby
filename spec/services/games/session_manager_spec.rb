@@ -127,8 +127,6 @@ expect(result[:valid]).to be true
 expect(result[:word]).to be_present
 expect(result[:word_object]).to be_a(Word)
 expect(session_manager.current_state).to eq(Games::SessionManager::GAME_STATE[:player_turn])
-        expect(session_manager.current_state).to eq(Games::SessionManager::GAME_STATE[:player_turn])
-      end
     end
 
     context '前の単語が記号で終わる場合' do
