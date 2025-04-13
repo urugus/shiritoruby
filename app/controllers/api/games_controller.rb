@@ -68,9 +68,9 @@ class Api::GamesController < ApplicationController
       render json: result.merge(
         computer_response: computer_response
       )
-    rescue Games::SessionManager::InvalidWordError,
-           Games::SessionManager::WordAlreadyUsedError,
-           Games::SessionManager::InvalidFirstLetterError => e
+    rescue Games::WordValidator::InvalidWordError,
+           Games::WordValidator::WordAlreadyUsedError,
+           Games::WordValidator::InvalidFirstLetterError => e
       render json: { error: e.message }, status: :unprocessable_entity
     rescue Games::SessionManager::GameSessionError => e
       render json: { error: e.message }, status: :bad_request
