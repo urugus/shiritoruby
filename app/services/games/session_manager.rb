@@ -105,7 +105,7 @@ module Games
       end
 
       # ゲームに単語を記録
-      record_word(response[:word])
+      record_word(response[:word_object])
 
       # プレイヤーのターンに変更
       @current_state = GAME_STATE[:player_turn]

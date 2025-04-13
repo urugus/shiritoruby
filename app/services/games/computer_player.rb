@@ -24,7 +24,8 @@ module Games
 
       {
         valid: true,
-        word: computer_word,
+        word: computer_word.word,
+        word_object: computer_word,
         message: "コンピューターは「#{computer_word.word}」と答えました。あなたの番です。"
       }
     end

@@ -14,8 +14,8 @@ RSpec.describe Games::ComputerPlayer do
         result = described_class.generate_response('ruby', game.id)
 
         expect(result[:valid]).to be true
-        expect(result[:word]).to be_a(Word)
-        expect(result[:word].word[0].downcase).to eq('y')
+        expect(result[:word_object]).to be_a(Word)
+        expect(result[:word][0].downcase).to eq('y')
       end
     end
 
