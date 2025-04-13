@@ -24,7 +24,7 @@ module Games
       time_bonus = 1.0
       if used_words_count > 0 && duration > 0
         avg_seconds_per_turn = duration.to_f / used_words_count
-        time_bonus = [ 10.0 / [ avg_seconds_per_turn, 1 ].max, 1.5 ].min
+        time_bonus = [10.0 / [avg_seconds_per_turn, 1].max, 1.5].min
       end
 
       # 最終スコア = ターンスコア * 時間ボーナス
