@@ -56,8 +56,11 @@ module Games
       # セッションデータを解析
       session_data = parse_session_data(session_record.data)
       session_data["game_id"]
-    rescue => e
-      Rails.logger.error "セッションデータの解析に失敗しました: #{e.message}"
+    rescue JSON::ParserError => e
+      Rails.logger.error "JSONの解析に失敗しました: #{e.message}"
+      nil
+    rescue NoMethodError, TypeError => e
+      Rails.logger.error "セッションデータの型エラーが発生しました: #{e.message}"
       nil
     end
 
