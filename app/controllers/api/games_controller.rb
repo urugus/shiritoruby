@@ -1,5 +1,7 @@
 class Api::GamesController < ApplicationController
-  skip_before_action :verify_authenticity_token
+  # APIリクエストにはCSRFトークンを検証する
+  # JavaScriptからのリクエストの場合、X-CSRF-Tokenヘッダーを使用
+  protect_from_forgery with: :exception
   before_action :set_session_manager, except: [:create, :index]
 
   # GET /api/games

@@ -27,7 +27,6 @@ RSpec.describe Games::SessionService do
     context 'セッションIDが無効な場合' do
       before do
         allow(ActiveRecord::SessionStore::Session).to receive(:find_by).and_return(nil)
-        allow(ActiveRecord::SessionStore::Session).to receive(:where).and_return([])
       end
 
       it '現在のセッションからゲームIDを取得しようとする' do

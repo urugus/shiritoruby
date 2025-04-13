@@ -43,14 +43,8 @@ module Games
     # @param session_id [String] セッションID
     # @return [String, nil] ゲームID
     def self.extract_game_id_from_session_record(session_id)
-      # 完全一致でセッションレコードを検索
+      # 完全一致でのみセッションレコードを検索
       session_record = ActiveRecord::SessionStore::Session.find_by(session_id: session_id)
-
-      # 完全一致するレコードが見つからない場合、部分一致で検索
-      unless session_record
-        session_record = ActiveRecord::SessionStore::Session.where("session_id LIKE ?", "%#{session_id}%").first
-      end
-
       return nil unless session_record&.data.present?
 
       # セッションデータを解析

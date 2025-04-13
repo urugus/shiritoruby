@@ -8,6 +8,11 @@ RSpec.describe Api::GamesController, type: :controller do
     @do = create(:word, word: 'do', description: 'ブロックを開始するキーワード')
     @open = create(:word, word: 'open', description: 'ファイルを開くメソッド')
     @net = create(:word, word: 'net', description: 'ネットワーク関連のモジュール')
+
+    # CSRFトークンを設定
+    @token = SecureRandom.base64(32)
+    request.env['HTTP_X_CSRF_TOKEN'] = @token
+    allow_any_instance_of(ActionController::Base).to receive(:form_authenticity_token).and_return(@token)
   end
 
   describe 'GET #index' do
@@ -91,7 +96,6 @@ RSpec.describe Api::GamesController, type: :controller do
       it '無効なセッションIDでエラーが返される' do
         request.headers["X-Session-ID"] = "invalid_session_id"
         allow(ActiveRecord::SessionStore::Session).to receive(:find_by).and_return(nil)
-        allow(ActiveRecord::SessionStore::Session).to receive(:where).and_return([])
 
         get :show, format: :json
 
