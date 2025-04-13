@@ -63,7 +63,7 @@ RSpec.describe Games::SessionManager do
         expect {
           # class? の場合、最後のアルファベットは 's' なので、'r'で始まる単語はエラー
           session_manager.player_turn('resque')
-        }.to raise_error(Games::SessionManager::InvalidFirstLetterError, /単語は「s」で始まる必要があります/)
+        }.to raise_error(Games::WordValidator::InvalidFirstLetterError, /単語は「s」で始まる必要があります/)
       end
     end
 
@@ -71,7 +71,7 @@ RSpec.describe Games::SessionManager do
       it 'InvalidWordErrorを発生させる' do
         expect {
           session_manager.player_turn('r')
-        }.to raise_error(Games::SessionManager::InvalidWordError)
+        }.to raise_error(Games::WordValidator::InvalidWordError)
       end
     end
 
@@ -84,7 +84,7 @@ RSpec.describe Games::SessionManager do
       it 'WordAlreadyUsedErrorを発生させる' do
         expect {
           session_manager.player_turn('ruby')
-        }.to raise_error(Games::SessionManager::WordAlreadyUsedError)
+        }.to raise_error(Games::WordValidator::WordAlreadyUsedError)
       end
     end
 
@@ -97,7 +97,7 @@ RSpec.describe Games::SessionManager do
       it 'InvalidFirstLetterErrorを発生させる' do
         expect {
           session_manager.player_turn('do')
-        }.to raise_error(Games::SessionManager::InvalidFirstLetterError)
+        }.to raise_error(Games::WordValidator::InvalidFirstLetterError)
       end
     end
 
@@ -144,8 +144,8 @@ RSpec.describe Games::SessionManager do
       end
 
       it '末尾から遡った最初のアルファベットで始まる単語を選択する' do
-        # private メソッドをテストするため、send を使用
-        next_letter = session_manager.send(:get_next_starting_letter, 'class?')
+        # WordValidatorのメソッドを使用
+        next_letter = Games::WordValidator.get_next_starting_letter('class?')
         expect(next_letter).to eq('s')
 
         # コンピューターが's'から始まる単語（string）を選択できること
