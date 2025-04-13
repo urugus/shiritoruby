@@ -178,18 +178,16 @@ export default class extends Controller {
       return;
     }
 
-    // セッションIDをURLパラメータとして追加
-    const url = this.sessionId
-      ? `${this.apiBaseUrl}/submit_word?session_id=${encodeURIComponent(
-          this.sessionId
-        )}`
-      : `${this.apiBaseUrl}/submit_word`;
+    // APIエンドポイントを設定
+    const url = `${this.apiBaseUrl}/submit_word`;
 
     fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-CSRF-Token": this.getCSRFToken(),
+        // セッションIDをヘッダーに含める
+        ...(this.sessionId ? { "X-Session-ID": this.sessionId } : {}),
       },
       body: JSON.stringify({ word }),
     })
@@ -286,18 +284,16 @@ export default class extends Controller {
 
   // タイムアウト時の処理
   handleTimeout() {
-    // セッションIDをURLパラメータとして追加
-    const url = this.sessionId
-      ? `${this.apiBaseUrl}/timeout?session_id=${encodeURIComponent(
-          this.sessionId
-        )}`
-      : `${this.apiBaseUrl}/timeout`;
+    // APIエンドポイントを設定
+    const url = `${this.apiBaseUrl}/timeout`;
 
     fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-CSRF-Token": this.getCSRFToken(),
+        // セッションIDをヘッダーに含める
+        ...(this.sessionId ? { "X-Session-ID": this.sessionId } : {}),
       },
     })
       .then((response) => {
