@@ -26,7 +26,7 @@ RSpec.describe Games::WordValidator do
 
       it '使用済み単語はエラーになる' do
         expect {
-          described_class.validate('ruby', nil, ['ruby'])
+          described_class.validate('ruby', nil, [ 'ruby' ])
         }.to raise_error(Games::WordValidator::WordAlreadyUsedError)
       end
 
