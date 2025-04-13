@@ -103,7 +103,30 @@ export default class extends Controller {
         if (data.session_id) {
           // セッションIDを確実に文字列として扱う
           this.sessionId = String(data.session_id);
-          console.log("セッションID保存:", this.sessionId);
+
+          // オブジェクトかどうかをチェック
+          if (typeof data.session_id === "object") {
+            console.warn(
+              "セッションIDがオブジェクトとして受信されました:",
+              data.session_id
+            );
+            // オブジェクトの場合は、JSONに変換して文字列化
+            if (data.session_id !== null) {
+              try {
+                this.sessionId = JSON.stringify(data.session_id);
+              } catch (e) {
+                console.error("セッションIDのJSON変換に失敗:", e);
+              }
+            }
+          }
+
+          console.log(
+            "セッションID保存:",
+            this.sessionId,
+            typeof this.sessionId
+          );
+        } else {
+          console.warn("セッションIDがレスポンスに含まれていません");
         }
         return data;
       })
