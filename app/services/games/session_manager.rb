@@ -166,8 +166,8 @@ module Games
         end_reason: @end_reason
       }
     end
+
     private
-    end
 
     # 単語を記録
     # @param word_record [Word] 記録する単語のレコード
