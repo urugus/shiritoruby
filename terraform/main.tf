@@ -402,6 +402,13 @@ resource "aws_lb_target_group" "app" {
     protocol            = "HTTP"
     matcher             = "200-299"
   }
+
+  # Sticky Sessionsの設定を追加
+  stickiness {
+    type            = "lb_cookie"
+    cookie_duration = 86400  # 1日（秒単位）
+    enabled         = true
+  }
 }
 
 resource "aws_lb_listener" "http" {
