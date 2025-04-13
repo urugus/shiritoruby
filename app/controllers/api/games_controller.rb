@@ -100,26 +100,68 @@ class Api::GamesController < ApplicationController
 
   # セッションからゲームセッションマネージャーを取得
   def set_session_manager
-    # URLパラメータからセッションIDを取得
-    if params[:session_id].present?
-      # セッションIDからセッションを復元
-      session_record = ActiveRecord::SessionStore::Session.find_by(session_id: params[:session_id])
-      if session_record && session_record.data.present?
-        begin
-          session_data = session_record.data.is_a?(String) ? JSON.parse(session_record.data) : session_record.data
-          game_id = session_data["game_id"]
-        rescue JSON::ParserError => e
-          Rails.logger.error "セッションデータの解析に失敗しました: #{e.message}"
-          render json: { error: "セッションデータが無効です" }, status: :unprocessable_entity
-          return
+    # セッションIDを取得（ヘッダーまたはURLパラメータから）
+    session_id = request.headers["X-Session-ID"] || params[:session_id]
+
+    if session_id.present?
+      # セッションIDの情報をログに出力
+      Rails.logger.info "セッションID検索: #{session_id}"
+
+      # セッションIDからセッションを復元（完全一致）
+      session_record = ActiveRecord::SessionStore::Session.find_by(session_id: session_id)
+
+      # セッションレコードが見つからない場合、部分一致で検索を試みる
+      unless session_record
+        Rails.logger.info "完全一致するセッションレコードが見つかりません。部分一致で検索します。"
+        session_record = ActiveRecord::SessionStore::Session.where("session_id LIKE ?", "%#{session_id}%").first
+      end
+
+      if session_record
+        Rails.logger.info "セッションレコード発見: #{session_record.id}, データ存在: #{session_record.data.present?}"
+
+        if session_record.data.present?
+          begin
+            # セッションデータの型をログに出力
+            Rails.logger.info "セッションデータの型: #{session_record.data.class}"
+
+            # セッションデータを解析
+            if session_record.data.is_a?(String)
+              session_data = JSON.parse(session_record.data)
+            elsif session_record.data.is_a?(Hash)
+              session_data = session_record.data
+            else
+              session_data = session_record.data.to_h rescue {}
+            end
+
+            # ゲームIDを取得
+            game_id = session_data["game_id"]
+            Rails.logger.info "セッションからゲームID取得: #{game_id}"
+          rescue JSON::ParserError => e
+            Rails.logger.error "セッションデータの解析に失敗しました: #{e.message}"
+            render json: { error: "セッションデータが無効です" }, status: :unprocessable_entity
+            return
+          rescue => e
+            Rails.logger.error "セッションデータ処理中にエラーが発生しました: #{e.message}"
+            Rails.logger.error e.backtrace.join("\n")
+            render json: { error: "セッションデータの処理に失敗しました" }, status: :unprocessable_entity
+            return
+          end
+        else
+          Rails.logger.warn "セッションレコードにデータがありません"
         end
+      else
+        Rails.logger.warn "セッションレコードが見つかりません: #{params[:session_id]}"
       end
     end
 
     # セッションからゲームIDを取得（URLパラメータからの取得に失敗した場合）
-    game_id ||= session[:game_id]
+    if game_id.nil?
+      game_id = session[:game_id]
+      Rails.logger.info "現在のセッションからゲームID取得: #{game_id}"
+    end
 
     unless game_id
+      Rails.logger.error "ゲームIDが見つかりません。セッションID: #{session_id}, 現在のセッション: #{session.id}"
       render json: { error: "ゲームセッションが見つかりません" }, status: :not_found
       return
     end
