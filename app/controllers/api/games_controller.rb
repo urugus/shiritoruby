@@ -194,7 +194,7 @@ class Api::GamesController < ApplicationController
 
       # まずJSONとしてパースを試みる
       begin
-        if session_record.data.start_with?('{')
+        if session_record.data.start_with?("{")
           session_data = JSON.parse(session_record.data)
           Rails.logger.debug "JSONとしてパースに成功: #{session_data.inspect}"
         end
@@ -202,12 +202,18 @@ class Api::GamesController < ApplicationController
         Rails.logger.debug "JSONとしてパースに失敗: #{e.message}"
       end
 
-      # JSONパースに失敗した場合、Marshalとしてデシリアライズを試みる
+      # JSONパースに失敗した場合、セッションデータを安全に取得する別の方法を試みる
       if session_data.nil?
         begin
-          session_data = Marshal.load(session_record.data)
-          Rails.logger.debug "Marshalとしてデシリアライズに成功: #{session_data.inspect}"
-        rescue TypeError, ArgumentError => e
+          # ActiveRecord::SessionStoreのセッションデータを直接取得
+          # Marshal.loadは使用せず、ActiveRecordのセッション管理機能を利用
+          session_store = ActionDispatch::Session::ActiveRecordStore.session_store
+          sid = session_record.session_id
+          env = { "rack.session.options" => { id: sid } }
+          session_data = session_store.send(:get_session, env, sid).last
+
+          Rails.logger.debug "セッションストアから直接データ取得に成功: #{session_data.inspect}"
+        rescue => e
           Rails.logger.error "Marshalとしてデシリアライズに失敗: #{e.message}"
         end
       end
