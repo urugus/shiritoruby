@@ -130,13 +130,7 @@ resource "aws_security_group" "alb" {
     description = "HTTPS"
   }
 
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "HTTP (リダイレクト用)"
-  }
+  # ポート80は不要なので削除
 
   egress {
     from_port   = 0
@@ -440,24 +434,7 @@ resource "aws_lb_listener" "https" {
   depends_on = [aws_lb_target_group.app]
 }
 
-# HTTPリスナー（HTTPSへリダイレクト）
-resource "aws_lb_listener" "http" {
-  load_balancer_arn = aws_lb.main.arn
-  port              = 80
-  protocol          = "HTTP"
-
-  default_action {
-    type = "redirect"
-    redirect {
-      port        = "443"
-      protocol    = "HTTPS"
-      status_code = "HTTP_301"
-    }
-  }
-
-  # 明示的な依存関係を設定
-  depends_on = [aws_lb_target_group.app]
-}
+# ポート80は不要なので、HTTPリスナーを削除
 
 # ECSサービス
 resource "aws_ecs_service" "app" {
@@ -479,9 +456,8 @@ resource "aws_ecs_service" "app" {
     container_port   = 3000
   }
 
-  # HTTPSリスナーが存在する場合は、それにも依存する
+  # HTTPSリスナーが存在する場合のみ依存関係を設定
   depends_on = [
-    aws_lb_listener.http,
     local.certificate_arn != null ? aws_lb_listener.https[0] : null
   ]
 }
