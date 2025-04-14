@@ -45,3 +45,21 @@ variable "rails_master_key" {
   type        = string
   sensitive   = true
 }
+
+variable "domain_name" {
+  description = "Domain name for the application (e.g., example.com)"
+  type        = string
+  default     = ""
+}
+
+variable "create_acm_certificate" {
+  description = "Whether to create a new ACM certificate"
+  type        = bool
+  default     = true
+}
+
+variable "acm_certificate_arn" {
+  description = "ARN of an existing ACM certificate (if create_acm_certificate is false)"
+  type        = string
+  default     = ""
+}
