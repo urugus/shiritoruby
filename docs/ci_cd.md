@@ -34,7 +34,31 @@ CDパイプラインは、`.github/workflows/deploy.yml`で定義されており
 
 ## 必要な設定
 
-### GitHub Secrets
+### OIDC認証（推奨）
+
+GitHub ActionsとAWSの連携には、OpenID Connect（OIDC）を使用した認証方法を推奨します。この方法では、長期的なIAMユーザー認証情報をGitHubに保存する必要がなく、一時的な認証情報を自動的に取得するため、セキュリティが向上します。
+
+#### 必要なAWS設定
+
+Terraformを使用して、以下のリソースを作成します：
+
+1. GitHub OIDC Provider
+2. GitHub Actions用のIAMロール（必要な権限を付与）
+
+これらの設定は`terraform/main.tf`に含まれています。
+
+#### GitHub Secrets
+
+OIDCを使用する場合、以下のGitHub Secretsを設定する必要があります：
+
+1. `AWS_ACCOUNT_ID`: AWSアカウントID
+2. `AWS_REGION`: AWSリージョン（ap-northeast-1）
+
+### IAMユーザー認証（従来の方法）
+
+従来の方法として、IAMユーザーの長期的な認証情報を使用することもできます。
+
+#### GitHub Secrets
 
 CDパイプラインを実行するためには、以下のGitHub Secretsを設定する必要があります：
 
@@ -113,7 +137,7 @@ CDパイプラインを実行するためには、以下のGitHub Secretsを設�
    - このボタンは通常、画面の右上または中央上部にあります。
 
 6. 以下の3つのシークレットをそれぞれ追加します：
-   
+
    a. 1つ目のシークレット：
    - 「Name」欄に: `AWS_ACCESS_KEY_ID`
    - 「Value」欄に: AWSのIAMユーザーのアクセスキーID
@@ -135,6 +159,24 @@ CDパイプラインを実行するためには、以下のGitHub Secretsを設�
 
 これらのシークレットは暗号化されて保存され、GitHub Actionsのワークフロー内でのみ参照できます。値自体はGitHubの管理画面でも表示されないため、セキュリティが確保されています。
 
+### OIDC認証への移行手順
+
+既存のIAMユーザー認証からOIDC認証に移行するには、以下の手順を実行します：
+
+1. Terraformを適用して、OIDCプロバイダーとIAMロールを作成します：
+   ```bash
+   cd terraform
+   AWS_PROFILE=shiritoruby terraform apply
+   ```
+
+2. GitHubリポジトリの「Settings」→「Secrets and variables」→「Actions」で以下のシークレットを設定します：
+   - `AWS_ACCOUNT_ID`: AWSアカウントID
+   - `AWS_REGION`: ap-northeast-1（既存のシークレットを確認）
+
+3. 既存のIAMユーザー認証情報のシークレットは、OIDC認証が正常に機能することを確認した後に削除できます：
+   - `AWS_ACCESS_KEY_ID`
+   - `AWS_SECRET_ACCESS_KEY`
+
 ## デプロイフロー
 
 1. 開発者がfeatureブランチで機能を開発します。
@@ -152,8 +194,76 @@ CDパイプラインを実行するためには、以下のGitHub Secretsを設�
 
 1. GitHub Actionsのログを確認して、エラーメッセージを特定します。
 2. AWS認証情報が正しく設定されていることを確認します。
-3. IAMユーザーに必要な権限が付与されていることを確認します。
+3. 認証方法に応じて確認します：
+   - IAMユーザー認証の場合：IAMユーザーに必要な権限が付与されていることを確認します。
+   - OIDC認証の場合：IAMロールに必要な権限が付与されていることを確認します。
 4. ECRリポジトリ、ECSクラスター、サービス名が正しいことを確認します。
+
+### ECSタスク定義のデプロイエラー
+
+ECSタスク定義をデプロイする際に以下のようなエラーが発生する場合があります：
+
+1. 不要なプロパティによるエラー：
+
+```
+Error: Failed to register task definition in ECS: There were 2 validation errors:
+* UnexpectedParameter: Unexpected key 'registeredAt' found in params
+* UnexpectedParameter: Unexpected key 'registeredBy' found in params
+```
+
+これは、`aws ecs describe-task-definition`コマンドで取得したタスク定義に、新しいタスク定義を登録する際には不要（または許可されていない）プロパティが含まれているためです。以下のプロパティが問題になることがあります：
+
+- compatibilities
+- taskDefinitionArn
+- requiresAttributes
+- revision
+- status
+- registeredAt
+- registeredBy
+
+解決策：
+
+1. タスク定義をダウンロードした後、不要なプロパティを削除するステップをワークフローに追加します：
+
+```yaml
+- name: Clean task definition
+  run: |
+    # 不要なプロパティを削除
+    jq 'del(.taskDefinitionArn, .status, .revision, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)' task-definition.json > cleaned-task-definition.json
+    mv cleaned-task-definition.json task-definition.json
+```
+
+2. この修正を`.github/workflows/deploy.yml`ファイルの「Download task definition」ステップの後に追加します。
+
+2. デプロイコントローラーのエラー：
+
+```
+Error: Unsupported deployment controller: ECS
+```
+
+これは、GitHub Actionsで使用しているアクションのバージョンが古い場合に発生することがあります。以下のアクションを最新バージョンに更新することで解決できます：
+
+1. `aws-actions/amazon-ecs-render-task-definition`
+2. `aws-actions/amazon-ecs-deploy-task-definition`
+
+例：
+```yaml
+- name: Fill in the new image ID in the Amazon ECS task definition
+  id: task-def
+  uses: aws-actions/amazon-ecs-render-task-definition@v1.7.1
+  with:
+    task-definition: task-definition.json
+    container-name: shiritoruby
+    image: ${{ steps.build-image.outputs.image }}
+
+- name: Deploy Amazon ECS task definition
+  uses: aws-actions/amazon-ecs-deploy-task-definition@v2.3.1
+  with:
+    task-definition: ${{ steps.task-def.outputs.task-definition }}
+    service: shiritoruby-service
+    cluster: shiritoruby-cluster
+    wait-for-service-stability: true
+```
 
 ### アプリケーションが正常に動作しない場合
 

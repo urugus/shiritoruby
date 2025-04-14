@@ -1,6 +1,8 @@
 class Api::GamesController < ApplicationController
-  skip_before_action :verify_authenticity_token, if: -> { request.format.json? }
-  before_action :set_session_manager, except: [ :create, :index ]
+  # APIリクエストにはCSRFトークンを検証する
+  # JavaScriptからのリクエストの場合、X-CSRF-Tokenヘッダーを使用
+  protect_from_forgery with: :exception
+  before_action :set_session_manager, except: [:create, :index]
 
   # GET /api/games
   # 直近の高スコアを返す
@@ -68,9 +70,9 @@ class Api::GamesController < ApplicationController
       render json: result.merge(
         computer_response: computer_response
       )
-    rescue Games::SessionManager::InvalidWordError,
-           Games::SessionManager::WordAlreadyUsedError,
-           Games::SessionManager::InvalidFirstLetterError => e
+    rescue Games::WordValidator::InvalidWordError,
+           Games::WordValidator::WordAlreadyUsedError,
+           Games::WordValidator::InvalidFirstLetterError => e
       render json: { error: e.message }, status: :unprocessable_entity
     rescue Games::SessionManager::GameSessionError => e
       render json: { error: e.message }, status: :bad_request

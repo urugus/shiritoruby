@@ -4,6 +4,12 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  id-token: write  # OIDCトークンの取得に必要
+  contents: read   # リポジトリのコードを読み取るために必要
+  actions: read    # GitHub Actionsの実行コンテキストへのアクセスに必要
+  packages: write  # パッケージの公開に必要
+
 jobs:
   deploy:
     name: Deploy to AWS
@@ -13,12 +19,63 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # OIDCトークンは permissions: id-token: write で自動的に利用可能になるため、
+      # 明示的なactions/id-tokenステップは不要です
+
+      - name: Debug OIDC Context and Secrets
+        env:
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          echo "GitHub Actions OIDC is enabled via permissions: id-token: write"
+          echo "Repository: ${{ github.repository }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Event name: ${{ github.event_name }}"
+          echo "Run ID: ${{ github.run_id }}"
+          echo "Run number: ${{ github.run_number }}"
+
+          # AWS_ACCOUNT_IDの値を確認（セキュリティのため一部を隠す）
+          if [ -n "$AWS_ACCOUNT_ID" ]; then
+            echo "AWS_ACCOUNT_ID: ${#AWS_ACCOUNT_ID} characters, ends with ...${AWS_ACCOUNT_ID: -4}"
+          else
+            echo "AWS_ACCOUNT_ID is not set"
+          fi
+          echo "AWS_REGION: $AWS_REGION"
+
+          # OIDCトークンのsubクレームを確認するためのデバッグ情報
+          echo "Expected sub claim format: repo:urugus/shiritoruby:ref:refs/heads/main"
+          echo "IAM Role Trust Policy condition: repo:urugus/shiritoruby:ref:refs/heads/main, repo:urugus/shiritoruby:pull_request"
+
       - name: Configure AWS credentials
+        id: aws-credentials
         uses: aws-actions/configure-aws-credentials@v2
+        env:
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-role
           aws-region: ${{ secrets.AWS_REGION }}
+          role-duration-seconds: 900  # 15分（デフォルト）
+          audience: sts.amazonaws.com
+          mask-aws-account-id: true
+
+      - name: Debug AWS Credentials
+        run: |
+          # AWS認証情報が正常に設定されたことを確認
+          echo "AWS credentials configured: ${{ steps.aws-credentials.outputs.aws-account-id || 'Failed to get account ID' }}"
+
+          # IAMロールの情報を表示
+          if [ -n "$AWS_ACCESS_KEY_ID" ]; then
+            echo "AWS credentials are available"
+            echo "Assumed role: $(aws sts get-caller-identity --query 'Arn' --output text || echo 'Failed to get role ARN')"
+          else
+            echo "AWS credentials are NOT available"
+          fi
+
+          # エラーが発生した場合の詳細情報
+          echo "AWS_ROLE_ARN: ${{ env.AWS_ROLE_ARN || 'Not set' }}"
+          echo "AWS_WEB_IDENTITY_TOKEN_FILE: ${AWS_WEB_IDENTITY_TOKEN_FILE:-'Not set'}"
+
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -49,16 +106,22 @@ jobs:
             --task-definition shiritoruby \
             --query taskDefinition > task-definition.json
 
+      - name: Clean task definition
+        run: |
+          # 不要なプロパティを削除
+          jq 'del(.taskDefinitionArn, .status, .revision, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)' task-definition.json > cleaned-task-definition.json
+          mv cleaned-task-definition.json task-definition.json
+
       - name: Fill in the new image ID in the Amazon ECS task definition
         id: task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@v1.1.0
+        uses: aws-actions/amazon-ecs-render-task-definition@v1.7.1
         with:
           task-definition: task-definition.json
           container-name: shiritoruby
           image: ${{ steps.build-image.outputs.image }}
 
       - name: Deploy Amazon ECS task definition
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1.4.0
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2.3.1
         with:
           task-definition: ${{ steps.task-def.outputs.task-definition }}
           service: shiritoruby-service

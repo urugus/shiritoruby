@@ -27,6 +27,9 @@ export default class extends Controller {
     return "/api/games";
   }
 
+  // セッションIDを保存する
+  sessionId = null;
+
   connect() {
     this.resetGameState();
     // イベントリスナーを設定
@@ -75,7 +78,58 @@ export default class extends Controller {
       },
       body: JSON.stringify({ player_name: playerName }),
     })
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) {
+          // レスポンスのContent-Typeをチェック
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            return response.json().then((data) => {
+              throw new Error(data.error || "ゲームの開始に失敗しました");
+            });
+          } else {
+            // JSONでない場合はテキストとして読み込む
+            return response.text().then((text) => {
+              console.error("非JSONレスポンス:", text);
+              throw new Error(
+                "サーバーからの応答が不正です。管理者に連絡してください。"
+              );
+            });
+          }
+        }
+        return response.json();
+      })
+      .then((data) => {
+        // セッションIDを保存（レスポンスヘッダーから取得）
+        if (data.session_id) {
+          // セッションIDを確実に文字列として扱う
+          this.sessionId = String(data.session_id);
+
+          // オブジェクトかどうかをチェック
+          if (typeof data.session_id === "object") {
+            console.warn(
+              "セッションIDがオブジェクトとして受信されました:",
+              data.session_id
+            );
+            // オブジェクトの場合は、JSONに変換して文字列化
+            if (data.session_id !== null) {
+              try {
+                this.sessionId = JSON.stringify(data.session_id);
+              } catch (e) {
+                console.error("セッションIDのJSON変換に失敗:", e);
+              }
+            }
+          }
+
+          console.log(
+            "セッションID保存:",
+            this.sessionId,
+            typeof this.sessionId
+          );
+        } else {
+          console.warn("セッションIDがレスポンスに含まれていません");
+        }
+        return data;
+      })
       .then((data) => {
         // ゲーム状態をリセット
         this.resetGameState();
@@ -96,9 +150,14 @@ export default class extends Controller {
       })
       .catch((error) => {
         console.error("ゲーム開始エラー:", error);
+        // より詳細なエラーメッセージを表示
         this.showError(
-          "ゲームを開始できませんでした。もう一度お試しください。",
+          error.message ||
+            "ゲームを開始できませんでした。もう一度お試しください。"
         );
+        // エラー発生時にスタート画面を表示したままにする
+        this.startScreenTarget.classList.remove("hidden");
+        this.countdownTarget.classList.add("hidden");
       });
   }
 
@@ -119,19 +178,36 @@ export default class extends Controller {
       return;
     }
 
-    fetch(`${this.apiBaseUrl}/submit_word`, {
+    // APIエンドポイントを設定
+    const url = `${this.apiBaseUrl}/submit_word`;
+
+    fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-CSRF-Token": this.getCSRFToken(),
+        // セッションIDをヘッダーに含める
+        ...(this.sessionId ? { "X-Session-ID": this.sessionId } : {}),
       },
       body: JSON.stringify({ word }),
     })
       .then((response) => {
         if (!response.ok) {
-          return response.json().then((data) => {
-            throw new Error(data.error || "単語の送信に失敗しました");
-          });
+          // レスポンスのContent-Typeをチェック
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            return response.json().then((data) => {
+              throw new Error(data.error || "単語の送信に失敗しました");
+            });
+          } else {
+            // JSONでない場合はテキストとして読み込む
+            return response.text().then((text) => {
+              console.error("非JSONレスポンス:", text);
+              throw new Error(
+                "サーバーからの応答が不正です。管理者に連絡してください。"
+              );
+            });
+          }
         }
         return response.json();
       })
@@ -208,14 +284,33 @@ export default class extends Controller {
 
   // タイムアウト時の処理
   handleTimeout() {
-    fetch(`${this.apiBaseUrl}/timeout`, {
+    // APIエンドポイントを設定
+    const url = `${this.apiBaseUrl}/timeout`;
+
+    fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-CSRF-Token": this.getCSRFToken(),
+        // セッションIDをヘッダーに含める
+        ...(this.sessionId ? { "X-Session-ID": this.sessionId } : {}),
       },
     })
-      .then((response) => response.json())
+      .then((response) => {
+        // レスポンスのContent-Typeをチェック
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          return response.json();
+        } else {
+          // JSONでない場合はテキストとして読み込む
+          return response.text().then((text) => {
+            console.error("非JSONレスポンス:", text);
+            throw new Error(
+              "サーバーからの応答が不正です。管理者に連絡してください。"
+            );
+          });
+        }
+      })
       .then((data) => {
         if (data.game_over) {
           this.handleGameOver(data);
@@ -223,6 +318,13 @@ export default class extends Controller {
       })
       .catch((error) => {
         console.error("タイムアウト処理エラー:", error);
+        this.showError(
+          "タイムアウト処理中にエラーが発生しました。ゲームをリセットします。"
+        );
+        // エラー発生時にゲームをリセット
+        setTimeout(() => {
+          this.resetGame();
+        }, 3000);
       });
   }
 
@@ -252,7 +354,11 @@ export default class extends Controller {
       scoreDetails.className = "score-details";
       scoreDetails.innerHTML = `
         <div class="duration-info">${durationText}</div>
-        ${data.time_bonus ? `<div class="bonus-info">タイムボーナス: ×${data.time_bonus}</div>` : ""}
+        ${
+          data.time_bonus
+            ? `<div class="bonus-info">タイムボーナス: ×${data.time_bonus}</div>`
+            : ""
+        }
       `;
 
       // すでに詳細が表示されている場合は置き換え、なければ追加
@@ -367,7 +473,9 @@ export default class extends Controller {
     this.errorMessageTarget.classList.add("error");
 
     // エラーの場合は、現在の単語を更新せず、明確にエラー表示する
-    this.currentWordTarget.innerHTML = `<span class="error-highlight">${this.gameState.lastWord || "ゲーム開始"}</span>`;
+    this.currentWordTarget.innerHTML = `<span class="error-highlight">${
+      this.gameState.lastWord || "ゲーム開始"
+    }</span>`;
 
     // 5秒後にエラーメッセージを消去（時間を延長）
     setTimeout(() => {

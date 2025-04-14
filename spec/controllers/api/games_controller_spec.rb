@@ -8,6 +8,11 @@ RSpec.describe Api::GamesController, type: :controller do
     @do = create(:word, word: 'do', description: 'ブロックを開始するキーワード')
     @open = create(:word, word: 'open', description: 'ファイルを開くメソッド')
     @net = create(:word, word: 'net', description: 'ネットワーク関連のモジュール')
+
+    # CSRFトークンを設定
+    @token = SecureRandom.base64(32)
+    request.env['HTTP_X_CSRF_TOKEN'] = @token
+    allow_any_instance_of(ActionController::Base).to receive(:form_authenticity_token).and_return(@token)
   end
 
   describe 'GET #index' do
@@ -68,6 +73,37 @@ RSpec.describe Api::GamesController, type: :controller do
         expect(json_response['error']).to be_present
       end
     end
+
+    context 'セッションIDを使用する場合' do
+      let(:game) { create(:game, player_name: 'セッションIDテスト') }
+      let(:session_record) { instance_double(ActiveRecord::SessionStore::Session, data: { "game_id" => game.id }.to_json) }
+      let(:session_id) { "test_session_id" }
+
+      before do
+        allow(ActiveRecord::SessionStore::Session).to receive(:find_by).with(session_id: session_id).and_return(session_record)
+        allow(Game).to receive(:find_by).with(id: game.id).and_return(game)
+      end
+
+      it 'セッションIDを使用してゲーム状態を取得する' do
+        request.headers["X-Session-ID"] = session_id
+        get :show, format: :json
+
+        expect(response).to have_http_status(:success)
+        json_response = JSON.parse(response.body)
+        expect(json_response['player_name']).to eq('セッションIDテスト')
+      end
+
+      it '無効なセッションIDでエラーが返される' do
+        request.headers["X-Session-ID"] = "invalid_session_id"
+        allow(ActiveRecord::SessionStore::Session).to receive(:find_by).and_return(nil)
+
+        get :show, format: :json
+
+        expect(response).to have_http_status(:not_found)
+        json_response = JSON.parse(response.body)
+        expect(json_response['error']).to be_present
+      end
+    end
   end
 
   describe 'POST #submit_word' do
@@ -101,7 +137,7 @@ RSpec.describe Api::GamesController, type: :controller do
       it 'エラーを返す' do
         # 手動でコントローラーをモックしてエラーをシミュレート
         allow_any_instance_of(Games::SessionManager).to receive(:player_turn).and_raise(
-          Games::SessionManager::InvalidFirstLetterError, "単語は「t」で始まる必要があります"
+          Games::WordValidator::InvalidFirstLetterError, "単語は「t」で始まる必要があります"
         )
 
         post :submit_word, params: { word: 'do' }, format: :json

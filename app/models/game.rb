@@ -15,7 +15,11 @@ class Game < ApplicationRecord
   has_many :words, through: :game_words
 
   # バリデーション
-  validates :player_name, presence: true
+  validates :player_name, presence: true, length: { maximum: 50 }
+  validates :player_name, format: {
+    with: /\A[a-zA-Z0-9\p{Hiragana}\p{Katakana}\p{Han}ー\s]+\z/,
+    message: "には英数字、日本語、スペースのみ使用できます"
+  }
   validates :score, presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
 
   # スコープ

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_03_22_152126) do
+ActiveRecord::Schema[8.0].define(version: 2025_04_13_134200) do
   create_table "game_words", force: :cascade do |t|
     t.integer "game_id", null: false
     t.integer "word_id", null: false
@@ -29,6 +29,15 @@ ActiveRecord::Schema[8.0].define(version: 2025_03_22_152126) do
     t.integer "duration_seconds"
   end
 
+  create_table "sessions", force: :cascade do |t|
+    t.string "session_id", null: false
+    t.text "data"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["session_id"], name: "index_sessions_on_session_id", unique: true
+    t.index ["updated_at"], name: "index_sessions_on_updated_at"
+  end
+
   create_table "words", force: :cascade do |t|
     t.string "word", null: false
     t.string "normalized_word", null: false
@@ -36,6 +45,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_03_22_152126) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "word_type", default: "method", null: false
+    t.index "LOWER(SUBSTR(word, 1, 1))", name: "index_words_on_first_letter"
     t.index ["normalized_word"], name: "index_words_on_normalized_word", unique: true
     t.index ["word"], name: "index_words_on_word", unique: true
     t.index ["word_type"], name: "index_words_on_word_type"
