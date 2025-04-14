@@ -63,3 +63,76 @@ variable "acm_certificate_arn" {
   type        = string
   default     = ""
 }
+
+# 既存のインフラストラクチャを参照するための変数
+variable "use_existing_infrastructure" {
+  description = "Whether to use existing infrastructure"
+  type        = bool
+  default     = true
+}
+
+variable "existing_vpc_id" {
+  description = "ID of an existing VPC"
+  type        = string
+  default     = ""
+}
+
+variable "existing_public_subnet_ids" {
+  description = "IDs of existing public subnets"
+  type        = list(string)
+  default     = []
+}
+
+variable "existing_private_subnet_ids" {
+  description = "IDs of existing private subnets"
+  type        = list(string)
+  default     = []
+}
+
+variable "existing_security_group_ids" {
+  description = "IDs of existing security groups"
+  type        = map(string)
+  default     = {}
+}
+
+variable "existing_ecr_repository_url" {
+  description = "URL of an existing ECR repository"
+  type        = string
+  default     = ""
+}
+
+variable "existing_ecs_cluster_name" {
+  description = "Name of an existing ECS cluster"
+  type        = string
+  default     = ""
+}
+
+variable "existing_ecs_task_execution_role_arn" {
+  description = "ARN of an existing ECS task execution role"
+  type        = string
+  default     = ""
+}
+
+variable "existing_cloudwatch_log_group_name" {
+  description = "Name of an existing CloudWatch log group"
+  type        = string
+  default     = ""
+}
+
+variable "existing_lb_arn" {
+  description = "ARN of an existing load balancer"
+  type        = string
+  default     = ""
+}
+
+variable "existing_lb_target_group_arn" {
+  description = "ARN of an existing load balancer target group"
+  type        = string
+  default     = ""
+}
+
+variable "task_definition_revision" {
+  description = "Revision of the existing ECS task definition"
+  type        = string
+  default     = "1"  # デフォルトは1を設定
+}

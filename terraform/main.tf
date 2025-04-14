@@ -19,8 +19,15 @@ provider "aws" {
 # 現在のAWSアカウントIDを取得するためのデータソース
 data "aws_caller_identity" "current" {}
 
+# 既存のECRリポジトリを参照するためのデータソース
+data "aws_ecr_repository" "shiritoruby" {
+  count = var.use_existing_infrastructure ? 1 : 0
+  name  = var.app_name
+}
+
 # ECRリポジトリ
 resource "aws_ecr_repository" "shiritoruby" {
+  count                = var.use_existing_infrastructure ? 0 : 1
   name                 = var.app_name
   image_tag_mutability = "MUTABLE"
 
@@ -29,8 +36,33 @@ resource "aws_ecr_repository" "shiritoruby" {
   }
 }
 
-# VPC設定（既存のVPCを使用する場合はこのセクションをコメントアウト）
+# ECRリポジトリのURLを取得するためのローカル変数
+locals {
+  ecr_repository_url = var.use_existing_infrastructure ? (
+    var.existing_ecr_repository_url != "" ? var.existing_ecr_repository_url : data.aws_ecr_repository.shiritoruby[0].repository_url
+  ) : aws_ecr_repository.shiritoruby[0].repository_url
+}
+
+# 既存のVPCを参照するためのデータソース
+data "aws_vpc" "main" {
+  count = var.use_existing_infrastructure && var.existing_vpc_id != "" ? 1 : 0
+  id    = var.existing_vpc_id
+}
+
+# 既存のサブネットを参照するためのデータソース
+data "aws_subnet" "public" {
+  count = var.use_existing_infrastructure && length(var.existing_public_subnet_ids) > 0 ? length(var.existing_public_subnet_ids) : 0
+  id    = var.existing_public_subnet_ids[count.index]
+}
+
+data "aws_subnet" "private" {
+  count = var.use_existing_infrastructure && length(var.existing_private_subnet_ids) > 0 ? length(var.existing_private_subnet_ids) : 0
+  id    = var.existing_private_subnet_ids[count.index]
+}
+
+# VPC設定
 resource "aws_vpc" "main" {
+  count                = var.use_existing_infrastructure ? 0 : 1
   cidr_block           = "10.0.0.0/16"
   enable_dns_support   = true
   enable_dns_hostnames = true
@@ -42,7 +74,8 @@ resource "aws_vpc" "main" {
 
 # サブネット
 resource "aws_subnet" "public_1" {
-  vpc_id                  = aws_vpc.main.id
+  count                   = var.use_existing_infrastructure ? 0 : 1
+  vpc_id                  = aws_vpc.main[0].id
   cidr_block              = "10.0.1.0/24"
   availability_zone       = "${var.aws_region}a"
   map_public_ip_on_launch = true
@@ -53,7 +86,8 @@ resource "aws_subnet" "public_1" {
 }
 
 resource "aws_subnet" "public_2" {
-  vpc_id                  = aws_vpc.main.id
+  count                   = var.use_existing_infrastructure ? 0 : 1
+  vpc_id                  = aws_vpc.main[0].id
   cidr_block              = "10.0.2.0/24"
   availability_zone       = "${var.aws_region}c"
   map_public_ip_on_launch = true
@@ -64,7 +98,8 @@ resource "aws_subnet" "public_2" {
 }
 
 resource "aws_subnet" "private_1" {
-  vpc_id            = aws_vpc.main.id
+  count             = var.use_existing_infrastructure ? 0 : 1
+  vpc_id            = aws_vpc.main[0].id
   cidr_block        = "10.0.3.0/24"
   availability_zone = "${var.aws_region}a"
 
@@ -74,7 +109,8 @@ resource "aws_subnet" "private_1" {
 }
 
 resource "aws_subnet" "private_2" {
-  vpc_id            = aws_vpc.main.id
+  count             = var.use_existing_infrastructure ? 0 : 1
+  vpc_id            = aws_vpc.main[0].id
   cidr_block        = "10.0.4.0/24"
   availability_zone = "${var.aws_region}c"
 
@@ -85,7 +121,8 @@ resource "aws_subnet" "private_2" {
 
 # インターネットゲートウェイ
 resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id
+  count  = var.use_existing_infrastructure ? 0 : 1
+  vpc_id = aws_vpc.main[0].id
 
   tags = {
     Name = "${var.app_name}-igw"
@@ -94,11 +131,12 @@ resource "aws_internet_gateway" "main" {
 
 # ルートテーブル
 resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.main.id
+  count  = var.use_existing_infrastructure ? 0 : 1
+  vpc_id = aws_vpc.main[0].id
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.main.id
+    gateway_id = aws_internet_gateway.main[0].id
   }
 
   tags = {
@@ -107,20 +145,54 @@ resource "aws_route_table" "public" {
 }
 
 resource "aws_route_table_association" "public_1" {
-  subnet_id      = aws_subnet.public_1.id
-  route_table_id = aws_route_table.public.id
+  count          = var.use_existing_infrastructure ? 0 : 1
+  subnet_id      = aws_subnet.public_1[0].id
+  route_table_id = aws_route_table.public[0].id
 }
 
 resource "aws_route_table_association" "public_2" {
-  subnet_id      = aws_subnet.public_2.id
-  route_table_id = aws_route_table.public.id
+  count          = var.use_existing_infrastructure ? 0 : 1
+  subnet_id      = aws_subnet.public_2[0].id
+  route_table_id = aws_route_table.public[0].id
+}
+
+# VPCとサブネットのIDを取得するためのローカル変数
+locals {
+  vpc_id = var.use_existing_infrastructure ? (
+    var.existing_vpc_id != "" ? var.existing_vpc_id : data.aws_vpc.main[0].id
+  ) : aws_vpc.main[0].id
+
+  public_subnet_ids = var.use_existing_infrastructure ? (
+    length(var.existing_public_subnet_ids) > 0 ? var.existing_public_subnet_ids : [for s in data.aws_subnet.public : s.id]
+  ) : [aws_subnet.public_1[0].id, aws_subnet.public_2[0].id]
+
+  private_subnet_ids = var.use_existing_infrastructure ? (
+    length(var.existing_private_subnet_ids) > 0 ? var.existing_private_subnet_ids : [for s in data.aws_subnet.private : s.id]
+  ) : [aws_subnet.private_1[0].id, aws_subnet.private_2[0].id]
+}
+
+# 既存のセキュリティグループを参照するためのデータソース
+data "aws_security_group" "alb" {
+  count = var.use_existing_infrastructure && lookup(var.existing_security_group_ids, "alb", "") != "" ? 1 : 0
+  id    = var.existing_security_group_ids["alb"]
+}
+
+data "aws_security_group" "ecs" {
+  count = var.use_existing_infrastructure && lookup(var.existing_security_group_ids, "ecs", "") != "" ? 1 : 0
+  id    = var.existing_security_group_ids["ecs"]
+}
+
+data "aws_security_group" "db" {
+  count = var.use_existing_infrastructure && lookup(var.existing_security_group_ids, "db", "") != "" ? 1 : 0
+  id    = var.existing_security_group_ids["db"]
 }
 
 # セキュリティグループ
 resource "aws_security_group" "alb" {
+  count       = var.use_existing_infrastructure ? 0 : 1
   name        = "${var.app_name}-alb-sg"
   description = "ALB Security Group"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = local.vpc_id
 
   ingress {
     from_port   = 443
@@ -143,15 +215,16 @@ resource "aws_security_group" "alb" {
 }
 
 resource "aws_security_group" "ecs" {
+  count       = var.use_existing_infrastructure ? 0 : 1
   name        = "${var.app_name}-ecs-sg"
   description = "ECS Security Group"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = local.vpc_id
 
   ingress {
     from_port       = 0
     to_port         = 0
     protocol        = "-1"
-    security_groups = [aws_security_group.alb.id]
+    security_groups = [local.alb_security_group_id]
   }
 
   egress {
@@ -167,15 +240,16 @@ resource "aws_security_group" "ecs" {
 }
 
 resource "aws_security_group" "db" {
+  count       = var.use_existing_infrastructure ? 0 : 1
   name        = "${var.app_name}-db-sg"
   description = "Database Security Group"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = local.vpc_id
 
   ingress {
     from_port       = 5432
     to_port         = 5432
     protocol        = "tcp"
-    security_groups = [aws_security_group.ecs.id]
+    security_groups = [local.ecs_security_group_id]
   }
 
   egress {
@@ -190,10 +264,32 @@ resource "aws_security_group" "db" {
   }
 }
 
+# セキュリティグループのIDを取得するためのローカル変数
+locals {
+  alb_security_group_id = var.use_existing_infrastructure ? (
+    lookup(var.existing_security_group_ids, "alb", "") != "" ? var.existing_security_group_ids["alb"] : try(data.aws_security_group.alb[0].id, "")
+  ) : aws_security_group.alb[0].id
+
+  ecs_security_group_id = var.use_existing_infrastructure ? (
+    lookup(var.existing_security_group_ids, "ecs", "") != "" ? var.existing_security_group_ids["ecs"] : try(data.aws_security_group.ecs[0].id, "")
+  ) : aws_security_group.ecs[0].id
+
+  db_security_group_id = var.use_existing_infrastructure ? (
+    lookup(var.existing_security_group_ids, "db", "") != "" ? var.existing_security_group_ids["db"] : try(data.aws_security_group.db[0].id, "")
+  ) : aws_security_group.db[0].id
+}
+
+# 既存のRDSインスタンスを参照するためのデータソース
+data "aws_db_instance" "main" {
+  count      = var.use_existing_infrastructure ? 1 : 0
+  db_instance_identifier = "${var.app_name}-db"
+}
+
 # RDS PostgreSQLデータベース
 resource "aws_db_subnet_group" "main" {
+  count      = var.use_existing_infrastructure ? 0 : 1
   name       = "${var.app_name}-db-subnet-group"
-  subnet_ids = [aws_subnet.private_1.id, aws_subnet.private_2.id]
+  subnet_ids = local.private_subnet_ids
 
   tags = {
     Name = "${var.app_name}-db-subnet-group"
@@ -201,6 +297,7 @@ resource "aws_db_subnet_group" "main" {
 }
 
 resource "aws_db_instance" "main" {
+  count                = var.use_existing_infrastructure ? 0 : 1
   identifier             = "${var.app_name}-db"
   allocated_storage      = 20
   storage_type           = "gp2"
@@ -211,8 +308,8 @@ resource "aws_db_instance" "main" {
   username               = var.db_username
   password               = var.db_password
   parameter_group_name   = "default.postgres14"
-  db_subnet_group_name   = aws_db_subnet_group.main.name
-  vpc_security_group_ids = [aws_security_group.db.id]
+  db_subnet_group_name   = aws_db_subnet_group.main[0].name
+  vpc_security_group_ids = [local.db_security_group_id]
   skip_final_snapshot    = true
   multi_az               = false
 
@@ -221,30 +318,70 @@ resource "aws_db_instance" "main" {
   }
 }
 
+# データベースのエンドポイントを取得するためのローカル変数
+locals {
+  db_endpoint = var.use_existing_infrastructure ? (
+    try(data.aws_db_instance.main[0].endpoint, "")
+  ) : aws_db_instance.main[0].endpoint
+}
+
+# 既存のSecretsを参照するためのデータソース
+data "aws_secretsmanager_secret" "rails_master_key" {
+  count = var.use_existing_infrastructure ? 1 : 0
+  name  = "${var.app_name}/RAILS_MASTER_KEY"
+}
+
+data "aws_secretsmanager_secret" "database_url" {
+  count = var.use_existing_infrastructure ? 1 : 0
+  name  = "${var.app_name}/DATABASE_URL"
+}
+
 # AWS Secrets Manager
 resource "aws_secretsmanager_secret" "rails_master_key" {
+  count       = var.use_existing_infrastructure ? 0 : 1
   name        = "${var.app_name}/RAILS_MASTER_KEY"
   description = "Rails Master Key for ${var.app_name}"
 }
 
 resource "aws_secretsmanager_secret_version" "rails_master_key" {
-  secret_id     = aws_secretsmanager_secret.rails_master_key.id
+  count         = var.use_existing_infrastructure ? 0 : 1
+  secret_id     = aws_secretsmanager_secret.rails_master_key[0].id
   secret_string = var.rails_master_key
 }
 
 resource "aws_secretsmanager_secret" "database_url" {
+  count       = var.use_existing_infrastructure ? 0 : 1
   name        = "${var.app_name}/DATABASE_URL"
   description = "Database URL for ${var.app_name}"
 }
 
 resource "aws_secretsmanager_secret_version" "database_url" {
-  secret_id     = aws_secretsmanager_secret.database_url.id
-  secret_string = "postgres://${var.db_username}:${var.db_password}@${aws_db_instance.main.endpoint}/${var.app_name}_production"
+  count         = var.use_existing_infrastructure ? 0 : 1
+  secret_id     = aws_secretsmanager_secret.database_url[0].id
+  secret_string = "postgres://${var.db_username}:${var.db_password}@${local.db_endpoint}/${var.app_name}_production"
+}
+
+# Secretsのarnを取得するためのローカル変数
+locals {
+  rails_master_key_arn = var.use_existing_infrastructure ? (
+    try(data.aws_secretsmanager_secret.rails_master_key[0].arn, "")
+  ) : aws_secretsmanager_secret.rails_master_key[0].arn
+
+  database_url_arn = var.use_existing_infrastructure ? (
+    try(data.aws_secretsmanager_secret.database_url[0].arn, "")
+  ) : aws_secretsmanager_secret.database_url[0].arn
+}
+
+# 既存のIAMロールを参照するためのデータソース
+data "aws_iam_role" "ecs_task_execution_role" {
+  count = var.use_existing_infrastructure && var.existing_ecs_task_execution_role_arn != "" ? 1 : 0
+  name  = "${var.app_name}-ecs-task-execution-role"
 }
 
 # IAMロール
 resource "aws_iam_role" "ecs_task_execution_role" {
-  name = "${var.app_name}-ecs-task-execution-role"
+  count = var.use_existing_infrastructure ? 0 : 1
+  name  = "${var.app_name}-ecs-task-execution-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -261,11 +398,13 @@ resource "aws_iam_role" "ecs_task_execution_role" {
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
-  role       = aws_iam_role.ecs_task_execution_role.name
+  count      = var.use_existing_infrastructure ? 0 : 1
+  role       = aws_iam_role.ecs_task_execution_role[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
 resource "aws_iam_policy" "secrets_access" {
+  count       = var.use_existing_infrastructure ? 0 : 1
   name        = "${var.app_name}-secrets-access"
   description = "Allow access to the application secrets"
 
@@ -279,8 +418,8 @@ resource "aws_iam_policy" "secrets_access" {
         Effect = "Allow"
         Resource = [
           "arn:aws:secretsmanager:${var.aws_region}:*:secret:${var.app_name}/*",
-          aws_secretsmanager_secret.rails_master_key.arn,
-          aws_secretsmanager_secret.database_url.arn
+          local.rails_master_key_arn,
+          local.database_url_arn
         ]
       }
     ]
@@ -288,23 +427,39 @@ resource "aws_iam_policy" "secrets_access" {
 }
 
 resource "aws_iam_role_policy_attachment" "secrets_access" {
-  role       = aws_iam_role.ecs_task_execution_role.name
-  policy_arn = aws_iam_policy.secrets_access.arn
+  count      = var.use_existing_infrastructure ? 0 : 1
+  role       = aws_iam_role.ecs_task_execution_role[0].name
+  policy_arn = aws_iam_policy.secrets_access[0].arn
+}
+
+# IAMロールのARNを取得するためのローカル変数
+locals {
+  ecs_task_execution_role_arn = var.use_existing_infrastructure ? (
+    var.existing_ecs_task_execution_role_arn != "" ? var.existing_ecs_task_execution_role_arn : try(data.aws_iam_role.ecs_task_execution_role[0].arn, "")
+  ) : aws_iam_role.ecs_task_execution_role[0].arn
 }
 
 # Secrets ManagerのVPCエンドポイント
 resource "aws_vpc_endpoint" "secretsmanager" {
-  vpc_id              = aws_vpc.main.id
+  count               = var.use_existing_infrastructure ? 0 : 1
+  vpc_id              = local.vpc_id
   service_name        = "com.amazonaws.${var.aws_region}.secretsmanager"
   vpc_endpoint_type   = "Interface"
-  subnet_ids          = [aws_subnet.private_1.id, aws_subnet.private_2.id]
-  security_group_ids  = [aws_security_group.ecs.id]
+  subnet_ids          = local.private_subnet_ids
+  security_group_ids  = [local.ecs_security_group_id]
   private_dns_enabled = true
+}
+
+# 既存のECSクラスターを参照するためのデータソース
+data "aws_ecs_cluster" "main" {
+  count        = var.use_existing_infrastructure && var.existing_ecs_cluster_name != "" ? 1 : 0
+  cluster_name = var.existing_ecs_cluster_name != "" ? var.existing_ecs_cluster_name : "${var.app_name}-cluster"
 }
 
 # ECSクラスター
 resource "aws_ecs_cluster" "main" {
-  name = "${var.app_name}-cluster"
+  count = var.use_existing_infrastructure ? 0 : 1
+  name  = "${var.app_name}-cluster"
 
   setting {
     name  = "containerInsights"
@@ -312,19 +467,33 @@ resource "aws_ecs_cluster" "main" {
   }
 }
 
+# ECSクラスターのARNを取得するためのローカル変数
+locals {
+  ecs_cluster_id = var.use_existing_infrastructure ? (
+    var.existing_ecs_cluster_name != "" ? var.existing_ecs_cluster_name : try(data.aws_ecs_cluster.main[0].id, "")
+  ) : aws_ecs_cluster.main[0].id
+}
+
+# 既存のCloudWatch Logsグループを参照するためのデータソース
+data "aws_cloudwatch_log_group" "app" {
+  count = var.use_existing_infrastructure && var.existing_cloudwatch_log_group_name != "" ? 1 : 0
+  name  = var.existing_cloudwatch_log_group_name != "" ? var.existing_cloudwatch_log_group_name : "/ecs/${var.app_name}"
+}
+
 # ECSタスク定義
 resource "aws_ecs_task_definition" "app" {
+  count                  = var.use_existing_infrastructure ? 0 : 1
   family                   = var.app_name
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = var.task_cpu
   memory                   = var.task_memory
-  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+  execution_role_arn       = local.ecs_task_execution_role_arn
 
   container_definitions = jsonencode([
     {
       name      = var.app_name
-      image     = "${aws_ecr_repository.shiritoruby.repository_url}:latest"
+      image     = "${local.ecr_repository_url}:latest"
       essential = true
       portMappings = [
         {
@@ -348,13 +517,13 @@ resource "aws_ecs_task_definition" "app" {
         },
         {
           name  = "DATABASE_URL"
-          value = "postgres://${var.db_username}:${var.db_password}@${aws_db_instance.main.endpoint}/${var.app_name}_production"
+          value = "postgres://${var.db_username}:${var.db_password}@${local.db_endpoint}/${var.app_name}_production"
         }
       ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          "awslogs-group"         = "/ecs/${var.app_name}"
+          "awslogs-group"         = local.cloudwatch_log_group_name
           "awslogs-region"        = var.aws_region
           "awslogs-stream-prefix" = "ecs"
           "awslogs-create-group"  = "true"
@@ -366,17 +535,26 @@ resource "aws_ecs_task_definition" "app" {
 
 # CloudWatch Logsグループ
 resource "aws_cloudwatch_log_group" "app" {
+  count             = var.use_existing_infrastructure ? 0 : 1
   name              = "/ecs/${var.app_name}"
   retention_in_days = 30
 }
 
+# CloudWatch Logsグループ名を取得するためのローカル変数
+locals {
+  cloudwatch_log_group_name = var.use_existing_infrastructure ? (
+    var.existing_cloudwatch_log_group_name != "" ? var.existing_cloudwatch_log_group_name : try(data.aws_cloudwatch_log_group.app[0].name, "/ecs/${var.app_name}")
+  ) : "/ecs/${var.app_name}"
+}
+
 # ALB
 resource "aws_lb" "main" {
+  count              = var.use_existing_infrastructure ? 0 : 1
   name               = "${var.app_name}-alb"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb.id]
-  subnets            = [aws_subnet.public_1.id, aws_subnet.public_2.id]
+  security_groups    = [local.alb_security_group_id]
+  subnets            = local.public_subnet_ids
 
   enable_deletion_protection = false
 
@@ -385,11 +563,18 @@ resource "aws_lb" "main" {
   }
 }
 
+# 既存のALBを参照するためのデータソース
+data "aws_lb" "main" {
+  count = var.use_existing_infrastructure ? 1 : 0
+  name  = "${var.app_name}-alb"
+}
+
 resource "aws_lb_target_group" "app" {
+  count       = var.use_existing_infrastructure ? 0 : 1
   name        = "${var.app_name}-tg-3000"
   port        = 3000
   protocol    = "HTTP"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = local.vpc_id
   target_type = "ip"
 
   health_check {
@@ -410,6 +595,12 @@ resource "aws_lb_target_group" "app" {
     cookie_duration = 86400  # 1日（秒単位）
     enabled         = true
   }
+}
+
+# 既存のターゲットグループを参照するためのデータソース
+data "aws_lb_target_group" "app" {
+  count = var.use_existing_infrastructure ? 1 : 0
+  name  = "${var.app_name}-tg-3000"
 }
 
 # ACM証明書（条件付き作成）
@@ -436,7 +627,8 @@ locals {
 
 # HTTPSリスナー
 resource "aws_lb_listener" "https" {
-  load_balancer_arn = aws_lb.main.arn
+  count             = var.use_existing_infrastructure ? 0 : (local.certificate_arn != null ? 1 : 0)
+  load_balancer_arn = aws_lb.main[0].arn
   port              = 443
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-2016-08"
@@ -444,39 +636,61 @@ resource "aws_lb_listener" "https" {
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.app.arn
+    target_group_arn = aws_lb_target_group.app[0].arn
   }
-
-  # 証明書が設定されている場合のみ作成
-  count = local.certificate_arn != null ? 1 : 0
 
   # 明示的な依存関係を設定
   depends_on = [aws_lb_target_group.app]
 }
 
-# ポート80は不要なので、HTTPリスナーを削除
+# HTTPリスナー（証明書がない場合のフォールバック）
+resource "aws_lb_listener" "http" {
+  count             = var.use_existing_infrastructure ? 0 : (local.certificate_arn == null ? 1 : 0)
+  load_balancer_arn = aws_lb.main[0].arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.app[0].arn
+  }
+
+  depends_on = [aws_lb_target_group.app]
+}
+# ターゲットグループのARNを取得するためのローカル変数
+locals {
+  target_group_arn = var.use_existing_infrastructure ? (
+    var.existing_lb_target_group_arn != "" ? var.existing_lb_target_group_arn : try(data.aws_lb_target_group.app[0].arn, "")
+  ) : aws_lb_target_group.app[0].arn
+
+  lb_arn = var.use_existing_infrastructure ? (
+    var.existing_lb_arn != "" ? var.existing_lb_arn : try(data.aws_lb.main[0].arn, "")
+  ) : aws_lb.main[0].arn
+}
 
 # ECSサービス
 resource "aws_ecs_service" "app" {
   name            = "${var.app_name}-service"
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.app.arn
+  cluster         = local.ecs_cluster_id
+  task_definition = var.use_existing_infrastructure ? "${var.app_name}:${var.task_definition_revision}" : aws_ecs_task_definition.app[0].arn
   desired_count   = var.app_count
   launch_type     = "FARGATE"
 
   network_configuration {
-    security_groups  = [aws_security_group.ecs.id]
-    subnets          = [aws_subnet.public_1.id, aws_subnet.public_2.id]
+    security_groups  = [local.ecs_security_group_id]
+    subnets          = local.public_subnet_ids
     assign_public_ip = true
   }
 
   load_balancer {
-    target_group_arn = aws_lb_target_group.app.arn
+    target_group_arn = local.target_group_arn
     container_name   = var.app_name
     container_port   = 3000
   }
-  # 明示的な依存関係を設定（条件なし）
-  depends_on = []
+  # 明示的な依存関係を設定
+  depends_on = [
+    aws_lb_target_group.app
+  ]
 }
 
 # GitHub OIDC Providerのサムプリントを自動的に取得
