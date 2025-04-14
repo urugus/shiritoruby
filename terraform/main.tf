@@ -123,10 +123,11 @@ resource "aws_security_group" "alb" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    from_port   = 80
-    to_port     = 80
+    from_port   = 443
+    to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+    description = "HTTPS"
   }
 
   egress {
@@ -411,19 +412,49 @@ resource "aws_lb_target_group" "app" {
   }
 }
 
-resource "aws_lb_listener" "http" {
+# ACM証明書（条件付き作成）
+resource "aws_acm_certificate" "cert" {
+  count             = var.create_acm_certificate && var.domain_name != "" ? 1 : 0
+  domain_name       = var.domain_name
+  validation_method = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  tags = {
+    Name = "${var.app_name}-certificate"
+  }
+}
+
+# 証明書のARNを決定するためのローカル変数
+locals {
+  certificate_arn = var.create_acm_certificate ? (
+    var.domain_name != "" ? aws_acm_certificate.cert[0].arn : null
+  ) : var.acm_certificate_arn
+}
+
+# HTTPSリスナー
+resource "aws_lb_listener" "https" {
   load_balancer_arn = aws_lb.main.arn
-  port              = 80
-  protocol          = "HTTP"
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-2016-08"
+  certificate_arn   = local.certificate_arn
 
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.app.arn
   }
 
+  # 証明書が設定されている場合のみ作成
+  count = local.certificate_arn != null ? 1 : 0
+
   # 明示的な依存関係を設定
   depends_on = [aws_lb_target_group.app]
 }
+
+# ポート80は不要なので、HTTPリスナーを削除
 
 # ECSサービス
 resource "aws_ecs_service" "app" {
@@ -444,8 +475,8 @@ resource "aws_ecs_service" "app" {
     container_name   = var.app_name
     container_port   = 3000
   }
-
-  depends_on = [aws_lb_listener.http]
+  # 明示的な依存関係を設定（条件なし）
+  depends_on = []
 }
 
 # GitHub OIDC Providerのサムプリントを自動的に取得

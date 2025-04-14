@@ -5,6 +5,11 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  id-token: write  # OIDCトークンの取得に必要
+  contents: read   # リポジトリのコードを読み取るために必要
+  actions: read    # GitHub Actionsの実行コンテキストへのアクセスに必要
+
 jobs:
   scan_ruby:
     runs-on: ubuntu-latest
@@ -103,3 +108,48 @@ jobs:
           path: ${{ github.workspace }}/tmp/screenshots
           if-no-files-found: ignore
           retention-days: 5
+
+  terraform_plan:
+    runs-on: ubuntu-latest
+    name: Terraform Plan
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        id: aws-credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        env:
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-role
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-duration-seconds: 900
+          audience: sts.amazonaws.com
+          mask-aws-account-id: true
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.0"
+
+      - name: Terraform Init
+        run: |
+          cd terraform
+          terraform init
+
+      - name: Terraform Validate
+        run: |
+          cd terraform
+          terraform validate
+
+      - name: Terraform Plan
+        run: |
+          cd terraform
+          terraform plan -input=false \
+            -var="db_username=${{ secrets.TF_VAR_DB_USERNAME }}" \
+            -var="db_password=${{ secrets.TF_VAR_DB_PASSWORD }}" \
+            -var="rails_master_key=${{ secrets.TF_VAR_RAILS_MASTER_KEY }}" \
+            -var="domain_name=${{ secrets.TF_VAR_DOMAIN_NAME }}" \
+            -var="create_acm_certificate=${{ secrets.TF_VAR_CREATE_ACM_CERTIFICATE || 'true' }}" \
+            -var="acm_certificate_arn=${{ secrets.TF_VAR_ACM_CERTIFICATE_ARN || '' }}"

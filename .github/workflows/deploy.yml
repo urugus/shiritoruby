@@ -136,3 +136,24 @@ jobs:
             --launch-type FARGATE \
             --network-configuration "awsvpcConfiguration={subnets=[ $(aws ecs describe-services --cluster shiritoruby-cluster --services shiritoruby-service --query 'services[0].networkConfiguration.awsvpcConfiguration.subnets[0]' --output text) ],securityGroups=[ $(aws ecs describe-services --cluster shiritoruby-cluster --services shiritoruby-service --query 'services[0].networkConfiguration.awsvpcConfiguration.securityGroups[0]' --output text) ],assignPublicIp=ENABLED}" \
             --overrides '{"containerOverrides": [ {"name": "shiritoruby", "command": [ "./bin/rails", "db:migrate" ]} ]}'
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.0"
+
+      - name: Terraform Init
+        run: |
+          cd terraform
+          terraform init
+
+      - name: Terraform Apply
+        run: |
+          cd terraform
+          terraform apply -auto-approve \
+            -var="db_username=${{ secrets.TF_VAR_DB_USERNAME }}" \
+            -var="db_password=${{ secrets.TF_VAR_DB_PASSWORD }}" \
+            -var="rails_master_key=${{ secrets.TF_VAR_RAILS_MASTER_KEY }}" \
+            -var="domain_name=${{ secrets.TF_VAR_DOMAIN_NAME }}" \
+            -var="create_acm_certificate=${{ secrets.TF_VAR_CREATE_ACM_CERTIFICATE || 'true' }}" \
+            -var="acm_certificate_arn=${{ secrets.TF_VAR_ACM_CERTIFICATE_ARN || '' }}"
