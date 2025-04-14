@@ -30,13 +30,29 @@ class Api::GamesController < ApplicationController
   # 新しいゲームを作成
   def create
     player_name = params[:player_name] || "ゲスト"
-    @session_manager = Games::SessionManager.new(player_name)
-    session[:game_id] = @session_manager.game.id
 
-    render json: {
-      message: "新しいゲームを開始しました",
-      game: @session_manager.game_state
-    }, status: :created
+    begin
+      @session_manager = Games::SessionManager.new(player_name)
+      session[:game_id] = @session_manager.game.id
+
+      # セッションIDをレスポンスに含める
+      session_id = request.session.id.to_s
+
+      render json: {
+        message: "新しいゲームを開始しました",
+        game: @session_manager.game_state,
+        session_id: session_id
+      }, status: :created
+    rescue => e
+      # エラーをログに記録
+      Rails.logger.error "ゲーム作成エラー: #{e.message}"
+      Rails.logger.error e.backtrace.join("\n")
+
+      # JSONレスポンスを返す
+      render json: {
+        error: "ゲームの作成に失敗しました: #{e.message}"
+      }, status: :unprocessable_entity
+    end
   end
 
   # POST /api/games/submit_word
@@ -80,7 +96,12 @@ class Api::GamesController < ApplicationController
 
   # セッションからゲームセッションマネージャーを取得
   def set_session_manager
-    game_id = session[:game_id]
+    # セッションIDを取得（ヘッダーまたはURLパラメータから）
+    session_id = request.headers["X-Session-ID"] || params[:session_id]
+
+    # セッションIDからゲームIDを取得
+    game_id = extract_game_id_from_session(session_id) || session[:game_id]
+
     unless game_id
       render json: { error: "ゲームセッションが見つかりません" }, status: :not_found
       return
@@ -126,5 +147,28 @@ class Api::GamesController < ApplicationController
     )
 
     @session_manager
+  end
+
+  # セッションレコードからゲームIDを抽出
+  # @param session_id [String] セッションID
+  # @return [String, nil] ゲームID
+  def extract_game_id_from_session(session_id)
+    return nil unless session_id.present?
+
+    # セッションレコードを検索
+    session_record = ActiveRecord::SessionStore::Session.find_by(session_id: session_id)
+    return nil unless session_record&.data.present?
+
+    # セッションデータを解析
+    begin
+      session_data = JSON.parse(session_record.data)
+      session_data["game_id"]
+    rescue JSON::ParserError => e
+      Rails.logger.error "JSONの解析に失敗しました: #{e.message}"
+      nil
+    rescue NoMethodError, TypeError => e
+      Rails.logger.error "セッションデータの型エラーが発生しました: #{e.message}"
+      nil
+    end
   end
 end

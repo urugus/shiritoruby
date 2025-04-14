@@ -1,13 +1,39 @@
 // Configure your import map in config/importmap.rb. Read more: https://github.com/rails/importmap-rails
-import "@hotwired/turbo-rails"
-import "controllers"
+import "@hotwired/turbo-rails";
+import "controllers";
 
 // crypto.randomUUID ポリフィル
+if (typeof crypto === "undefined") {
+  window.crypto = {};
+}
+
 if (!crypto.randomUUID) {
-  crypto.randomUUID = function() {
-    // https://stackoverflow.com/a/2117523/2800218
-    return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
-      ((c ^ ((crypto.getRandomValues(new Uint8Array(1))[0] & 15) >> (c / 4)))).toString(16)
+  // crypto.getRandomValues のポリフィル
+  if (!crypto.getRandomValues) {
+    crypto.getRandomValues = function (array) {
+      for (let i = 0; i < array.length; i++) {
+        array[i] = Math.floor(Math.random() * 256);
+      }
+      return array;
+    };
+  }
+
+  crypto.randomUUID = function () {
+    // より堅牢なUUID生成関数
+    let d = new Date().getTime();
+    if (
+      typeof performance !== "undefined" &&
+      typeof performance.now === "function"
+    ) {
+      d += performance.now(); // より高精度なタイムスタンプを追加
+    }
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
+      /[xy]/g,
+      function (c) {
+        const r = (d + Math.random() * 16) % 16 | 0;
+        d = Math.floor(d / 16);
+        return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+      }
     );
   };
 }
