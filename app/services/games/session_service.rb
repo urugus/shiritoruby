@@ -26,16 +26,22 @@ module Games
     def self.find_game_id(session_id = nil, current_session = nil)
       game_id = nil
 
+      # デバッグ用ログ出力
+      Rails.logger.debug "find_game_id: セッションID = #{session_id}, 現在のセッション = #{current_session.inspect}"
+
       # セッションIDからゲームIDを取得
       if session_id.present?
         game_id = extract_game_id_from_session_record(session_id)
+        Rails.logger.debug "セッションIDからのゲームID取得結果: #{game_id}"
       end
 
       # 現在のセッションからゲームIDを取得（セッションIDからの取得に失敗した場合）
       if game_id.nil? && current_session
         game_id = current_session[:game_id]
+        Rails.logger.debug "現在のセッションからのゲームID取得結果: #{game_id}"
       end
 
+      Rails.logger.debug "最終的なゲームID: #{game_id}"
       game_id
     end
 
@@ -43,12 +49,24 @@ module Games
     # @param session_id [String] セッションID
     # @return [String, nil] ゲームID
     def self.extract_game_id_from_session_record(session_id)
+      # デバッグ用ログ出力
+      Rails.logger.debug "extract_game_id_from_session_record: セッションID = #{session_id}"
+
       # 完全一致でのみセッションレコードを検索
       session_record = ActiveRecord::SessionStore::Session.find_by(session_id: session_id)
+
+      # デバッグ用ログ出力
+      if session_record
+        Rails.logger.debug "セッションレコードが見つかりました: #{session_record.inspect}"
+      else
+        Rails.logger.debug "セッションレコードが見つかりませんでした"
+      end
+
       return nil unless session_record&.data.present?
 
       # セッションデータを解析
       session_data = parse_session_data(session_record.data)
+      Rails.logger.debug "解析されたセッションデータ: #{session_data.inspect}"
       session_data["game_id"]
     rescue JSON::ParserError => e
       Rails.logger.error "JSONの解析に失敗しました: #{e.message}"
