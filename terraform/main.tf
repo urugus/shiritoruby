@@ -159,7 +159,7 @@ resource "aws_route_table_association" "public_2" {
 # VPCとサブネットのIDを取得するためのローカル変数
 locals {
   vpc_id = var.use_existing_infrastructure ? (
-    var.existing_vpc_id != "" ? var.existing_vpc_id : data.aws_vpc.main[0].id
+    var.existing_vpc_id != "" ? var.existing_vpc_id : ""
   ) : aws_vpc.main[0].id
 
   public_subnet_ids = var.use_existing_infrastructure ? (
@@ -697,6 +697,33 @@ resource "aws_ecs_service" "app" {
 data "external" "github_thumbprint" {
   program = ["bash", "-c", <<-EOT
     THUMBPRINT=$(openssl s_client -servername token.actions.githubusercontent.com -showcerts -connect token.actions.githubusercontent.com:443 < /dev/null 2>/dev/null | openssl x509 -fingerprint -sha1 -noout | cut -d '=' -f 2 | tr -d ':' | tr '[:upper:]' '[:lower:]')
+# GitHub Actions用の追加ポリシー
+resource "aws_iam_policy" "github_actions_additional_permissions" {
+  name        = "${var.app_name}-github-actions-additional-permissions"
+  description = "Additional permissions for GitHub Actions"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:DescribeRepositories",
+          "rds:DescribeDBInstances",
+          "secretsmanager:DescribeSecret",
+          "elasticloadbalancing:DescribeLoadBalancers",
+          "elasticloadbalancing:DescribeTargetGroups"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "github_actions_additional_permissions" {
+  role       = aws_iam_role.github_actions.name
+  policy_arn = aws_iam_policy.github_actions_additional_permissions.arn
+}
     echo "{\"thumbprint\": \"$THUMBPRINT\"}"
   EOT
   ]
@@ -753,7 +780,8 @@ resource "aws_iam_role_policy" "github_actions_ecr_ecs" {
           "ecr:InitiateLayerUpload",
           "ecr:UploadLayerPart",
           "ecr:CompleteLayerUpload",
-          "ecr:PutImage"
+          "ecr:PutImage",
+          "ecr:DescribeRepositories"
         ]
         Resource = "*"
       },
@@ -765,6 +793,29 @@ resource "aws_iam_role_policy" "github_actions_ecr_ecs" {
           "ecs:UpdateService",
           "ecs:DescribeServices",
           "ecs:RunTask"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "rds:DescribeDBInstances"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:DescribeSecret",
+          "secretsmanager:GetSecretValue"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "elasticloadbalancing:DescribeLoadBalancers",
+          "elasticloadbalancing:DescribeTargetGroups"
         ]
         Resource = "*"
       },
