@@ -136,3 +136,18 @@ jobs:
             --launch-type FARGATE \
             --network-configuration "awsvpcConfiguration={subnets=[ $(aws ecs describe-services --cluster shiritoruby-cluster --services shiritoruby-service --query 'services[0].networkConfiguration.awsvpcConfiguration.subnets[0]' --output text) ],securityGroups=[ $(aws ecs describe-services --cluster shiritoruby-cluster --services shiritoruby-service --query 'services[0].networkConfiguration.awsvpcConfiguration.securityGroups[0]' --output text) ],assignPublicIp=ENABLED}" \
             --overrides '{"containerOverrides": [ {"name": "shiritoruby", "command": [ "./bin/rails", "db:migrate" ]} ]}'
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.0"
+
+      - name: Terraform Init
+        run: |
+          cd terraform
+          terraform init
+
+      - name: Terraform Apply
+        run: |
+          cd terraform
+          terraform apply -auto-approve
