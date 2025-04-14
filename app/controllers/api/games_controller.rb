@@ -187,12 +187,48 @@ class Api::GamesController < ApplicationController
 
     # セッションデータを解析
     begin
-      session_data = JSON.parse(session_record.data)
-      session_data["game_id"]
-    rescue JSON::ParserError => e
-      Rails.logger.error "JSONの解析に失敗しました: #{e.message}"
-      nil
-    rescue NoMethodError, TypeError => e
+      # セッションデータの形式に応じて適切に解析
+      # ActiveRecord::SessionStoreはRailsのバージョンや環境によって
+      # JSONまたはMarshal.dumpでシリアライズされる可能性がある
+      session_data = nil
+
+      # まずJSONとしてパースを試みる
+      begin
+        if session_record.data.start_with?("{")
+          session_data = JSON.parse(session_record.data)
+          Rails.logger.debug "JSONとしてパースに成功: #{session_data.inspect}"
+        end
+      rescue JSON::ParserError => e
+        Rails.logger.debug "JSONとしてパースに失敗: #{e.message}"
+      end
+
+      # JSONパースに失敗した場合、セッションデータを安全に取得する別の方法を試みる
+      if session_data.nil?
+        begin
+          # ActiveRecord::SessionStoreのセッションデータを直接取得
+          # Marshal.loadは使用せず、ActiveRecordのセッション管理機能を利用
+          session_store = ActionDispatch::Session::ActiveRecordStore.session_store
+          sid = session_record.session_id
+          env = { "rack.session.options" => { id: sid } }
+          session_data = session_store.send(:get_session, env, sid).last
+
+          Rails.logger.debug "セッションストアから直接データ取得に成功: #{session_data.inspect}"
+        rescue => e
+          Rails.logger.error "Marshalとしてデシリアライズに失敗: #{e.message}"
+        end
+      end
+
+      # それでもnilの場合はエラー
+      if session_data.nil?
+        Rails.logger.error "セッションデータの解析に失敗しました"
+        return nil
+      end
+
+      # ゲームIDを取得
+      game_id = session_data["game_id"]
+      Rails.logger.debug "取得したゲームID: #{game_id}"
+      game_id
+    rescue NoMethodError, SecurityError, EncodingError => e
       Rails.logger.error "セッションデータの型エラーが発生しました: #{e.message}"
       nil
     end
