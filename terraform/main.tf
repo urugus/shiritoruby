@@ -130,8 +130,6 @@ resource "aws_security_group" "alb" {
     description = "HTTPS"
   }
 
-  # ポート80は不要なので削除
-
   egress {
     from_port   = 0
     to_port     = 0
