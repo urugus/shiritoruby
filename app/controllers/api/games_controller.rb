@@ -37,8 +37,17 @@ class Api::GamesController < ApplicationController
       @session_manager = Games::SessionManager.new(player_name)
       session[:game_id] = @session_manager.game.id
 
+      # デバッグ用ログ出力
+      Rails.logger.debug "create: セッションオプション = #{request.session_options.inspect}"
+      Rails.logger.debug "create: セッションID = #{request.session_options[:id]}"
+      Rails.logger.debug "create: セッションデータ = #{session.to_h}"
+
       # セッションIDをレスポンスに含める
-      session_id = request.session.id.to_s
+      # request.session.id ではなく request.session_options[:id] を使用
+      session_id = request.session_options[:id].to_s
+
+      # デバッグ用ログ出力
+      Rails.logger.debug "create: レスポンスに含めるセッションID = #{session_id}"
 
       render json: {
         message: "新しいゲームを開始しました",
@@ -95,13 +104,18 @@ class Api::GamesController < ApplicationController
   end
 
   private
+# セッションからゲームセッションマネージャーを取得
+def set_session_manager
+  # セッションIDを取得（ヘッダーまたはURLパラメータから）
+  session_id = request.headers["X-Session-ID"] || params[:session_id]
 
-  # セッションからゲームセッションマネージャーを取得
-  def set_session_manager
-    # セッションIDを取得（ヘッダーまたはURLパラメータから）
-    session_id = request.headers["X-Session-ID"] || params[:session_id]
+  # デバッグ用ログ出力
+  Rails.logger.debug "セッションID: #{session_id}"
+  Rails.logger.debug "現在のセッションオプション: #{request.session_options.inspect}"
+  Rails.logger.debug "現在のセッションID: #{request.session_options[:id]}"
 
-    # セッションIDからゲームIDを取得
+  # セッションIDからゲームIDを取得
+  game_id = extract_game_id_from_session(session_id) || session[:game_id]
     game_id = extract_game_id_from_session(session_id) || session[:game_id]
 
     unless game_id
@@ -157,8 +171,19 @@ class Api::GamesController < ApplicationController
   def extract_game_id_from_session(session_id)
     return nil unless session_id.present?
 
+    # デバッグ用ログ出力
+    Rails.logger.debug "extract_game_id_from_session: セッションID = #{session_id}"
+
     # セッションレコードを検索
     session_record = ActiveRecord::SessionStore::Session.find_by(session_id: session_id)
+
+    # デバッグ用ログ出力
+    if session_record
+      Rails.logger.debug "セッションレコードが見つかりました: #{session_record.inspect}"
+    else
+      Rails.logger.debug "セッションレコードが見つかりませんでした"
+    end
+
     return nil unless session_record&.data.present?
 
     # セッションデータを解析
