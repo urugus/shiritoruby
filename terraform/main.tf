@@ -123,10 +123,19 @@ resource "aws_security_group" "alb" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "HTTPS"
+  }
+
+  ingress {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+    description = "HTTP (リダイレクト用)"
   }
 
   egress {
@@ -411,14 +420,39 @@ resource "aws_lb_target_group" "app" {
   }
 }
 
+# HTTPSリスナー
+resource "aws_lb_listener" "https" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-2016-08"
+  certificate_arn   = local.certificate_arn
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.app.arn
+  }
+
+  # 証明書が設定されている場合のみ作成
+  count = local.certificate_arn != null ? 1 : 0
+
+  # 明示的な依存関係を設定
+  depends_on = [aws_lb_target_group.app]
+}
+
+# HTTPリスナー（HTTPSへリダイレクト）
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.main.arn
   port              = 80
   protocol          = "HTTP"
 
   default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.app.arn
+    type = "redirect"
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
   }
 
   # 明示的な依存関係を設定
@@ -445,7 +479,11 @@ resource "aws_ecs_service" "app" {
     container_port   = 3000
   }
 
-  depends_on = [aws_lb_listener.http]
+  # HTTPSリスナーが存在する場合は、それにも依存する
+  depends_on = [
+    aws_lb_listener.http,
+    local.certificate_arn != null ? aws_lb_listener.https[0] : null
+  ]
 }
 
 # GitHub OIDC Providerのサムプリントを自動的に取得
@@ -537,4 +575,26 @@ resource "aws_iam_role_policy" "github_actions_ecr_ecs" {
       }
     ]
   })
+}
+
+# ACM証明書（条件付き作成）
+resource "aws_acm_certificate" "cert" {
+  count             = var.create_acm_certificate && var.domain_name != "" ? 1 : 0
+  domain_name       = var.domain_name
+  validation_method = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  tags = {
+    Name = "${var.app_name}-certificate"
+  }
+}
+
+# 証明書のARNを決定するためのローカル変数
+locals {
+  certificate_arn = var.create_acm_certificate ? (
+    var.domain_name != "" ? aws_acm_certificate.cert[0].arn : null
+  ) : var.acm_certificate_arn
 }
