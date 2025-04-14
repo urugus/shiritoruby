@@ -8,6 +8,16 @@ if (typeof crypto === "undefined") {
 }
 
 if (!crypto.randomUUID) {
+  // crypto.getRandomValues のポリフィル
+  if (!crypto.getRandomValues) {
+    crypto.getRandomValues = function (array) {
+      for (let i = 0; i < array.length; i++) {
+        array[i] = Math.floor(Math.random() * 256);
+      }
+      return array;
+    };
+  }
+
   crypto.randomUUID = function () {
     // より堅牢なUUID生成関数
     let d = new Date().getTime();
