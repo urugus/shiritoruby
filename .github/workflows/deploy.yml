@@ -150,4 +150,10 @@ jobs:
       - name: Terraform Apply
         run: |
           cd terraform
-          terraform apply -auto-approve
+          terraform apply -auto-approve \
+            -var="db_username=${{ secrets.TF_VAR_DB_USERNAME }}" \
+            -var="db_password=${{ secrets.TF_VAR_DB_PASSWORD }}" \
+            -var="rails_master_key=${{ secrets.TF_VAR_RAILS_MASTER_KEY }}" \
+            -var="domain_name=${{ secrets.TF_VAR_DOMAIN_NAME }}" \
+            -var="create_acm_certificate=${{ secrets.TF_VAR_CREATE_ACM_CERTIFICATE || 'true' }}" \
+            -var="acm_certificate_arn=${{ secrets.TF_VAR_ACM_CERTIFICATE_ARN || '' }}"
