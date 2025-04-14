@@ -104,18 +104,17 @@ class Api::GamesController < ApplicationController
   end
 
   private
-# セッションからゲームセッションマネージャーを取得
-def set_session_manager
-  # セッションIDを取得（ヘッダーまたはURLパラメータから）
-  session_id = request.headers["X-Session-ID"] || params[:session_id]
+  # セッションからゲームセッションマネージャーを取得
+  def set_session_manager
+    # セッションIDを取得（ヘッダーまたはURLパラメータから）
+    session_id = request.headers["X-Session-ID"] || params[:session_id]
 
-  # デバッグ用ログ出力
-  Rails.logger.debug "セッションID: #{session_id}"
-  Rails.logger.debug "現在のセッションオプション: #{request.session_options.inspect}"
-  Rails.logger.debug "現在のセッションID: #{request.session_options[:id]}"
+    # デバッグ用ログ出力
+    Rails.logger.debug "セッションID: #{session_id}"
+    Rails.logger.debug "現在のセッションオプション: #{request.session_options.inspect}"
+    Rails.logger.debug "現在のセッションID: #{request.session_options[:id]}"
 
-  # セッションIDからゲームIDを取得
-  game_id = extract_game_id_from_session(session_id) || session[:game_id]
+    # セッションIDからゲームIDを取得
     game_id = extract_game_id_from_session(session_id) || session[:game_id]
 
     unless game_id
