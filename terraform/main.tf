@@ -412,6 +412,28 @@ resource "aws_lb_target_group" "app" {
   }
 }
 
+# ACM証明書（条件付き作成）
+resource "aws_acm_certificate" "cert" {
+  count             = var.create_acm_certificate && var.domain_name != "" ? 1 : 0
+  domain_name       = var.domain_name
+  validation_method = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  tags = {
+    Name = "${var.app_name}-certificate"
+  }
+}
+
+# 証明書のARNを決定するためのローカル変数
+locals {
+  certificate_arn = var.create_acm_certificate ? (
+    var.domain_name != "" ? aws_acm_certificate.cert[0].arn : null
+  ) : var.acm_certificate_arn
+}
+
 # HTTPSリスナー
 resource "aws_lb_listener" "https" {
   load_balancer_arn = aws_lb.main.arn
@@ -453,11 +475,8 @@ resource "aws_ecs_service" "app" {
     container_name   = var.app_name
     container_port   = 3000
   }
-
-  # HTTPSリスナーが存在する場合のみ依存関係を設定
-  depends_on = [
-    local.certificate_arn != null ? aws_lb_listener.https[0] : null
-  ]
+  # 明示的な依存関係を設定（条件なし）
+  depends_on = []
 }
 
 # GitHub OIDC Providerのサムプリントを自動的に取得
@@ -549,26 +568,4 @@ resource "aws_iam_role_policy" "github_actions_ecr_ecs" {
       }
     ]
   })
-}
-
-# ACM証明書（条件付き作成）
-resource "aws_acm_certificate" "cert" {
-  count             = var.create_acm_certificate && var.domain_name != "" ? 1 : 0
-  domain_name       = var.domain_name
-  validation_method = "DNS"
-
-  lifecycle {
-    create_before_destroy = true
-  }
-
-  tags = {
-    Name = "${var.app_name}-certificate"
-  }
-}
-
-# 証明書のARNを決定するためのローカル変数
-locals {
-  certificate_arn = var.create_acm_certificate ? (
-    var.domain_name != "" ? aws_acm_certificate.cert[0].arn : null
-  ) : var.acm_certificate_arn
 }
