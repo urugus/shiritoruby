@@ -378,8 +378,17 @@ export default class extends Controller {
 
     this.gameState.usedWords.forEach((word, index) => {
       const li = document.createElement("li");
-      const player = index % 2 === 0 ? "あなた" : "コンピュータ";
-      li.textContent = `${index + 1}. ${word} (${player})`;
+      const player = index % 2 === 0 ? "player" : "computer";
+      li.className = player === "player" ? "player-word" : "computer-word";
+
+      // 単語と番号を表示
+      const turnNumber = index + 1;
+      const turnNumberSpan = document.createElement("span");
+      turnNumberSpan.textContent = `${turnNumber}. ${word}`;
+      const playerSpan = document.createElement("span");
+      playerSpan.textContent = player === "player" ? "あなた" : "コンピューター";
+      li.appendChild(turnNumberSpan);
+      li.appendChild(playerSpan);
       gameOverWordList.appendChild(li);
     });
   }
