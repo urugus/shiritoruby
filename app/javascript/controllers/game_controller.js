@@ -378,7 +378,8 @@ export default class extends Controller {
 
     this.gameState.usedWords.forEach((word, index) => {
       const li = document.createElement("li");
-      li.textContent = `${index + 1}. ${word}`;
+      const player = index % 2 === 0 ? "あなた" : "コンピュータ";
+      li.textContent = `${index + 1}. ${word} (${player})`;
       gameOverWordList.appendChild(li);
     });
   }
