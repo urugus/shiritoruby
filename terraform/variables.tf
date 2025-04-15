@@ -87,3 +87,15 @@ variable "task_definition_revision" {
   type        = string
   default     = "1"
 }
+
+variable "existing_lb_dns_name" {
+  description = "DNS name of an existing load balancer"
+  type        = string
+  default     = ""
+}
+
+variable "existing_lb_zone_id" {
+  description = "Route 53 zone ID of an existing load balancer"
+  type        = string
+  default     = ""
+}
