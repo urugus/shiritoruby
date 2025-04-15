@@ -133,6 +133,7 @@ export default class extends Controller {
       .then((data) => {
         // ゲーム状態をリセット
         this.resetGameState();
+        this.gameState.usedWords = []; // usedWordsをリセット
 
         // UIを更新
         this.startScreenTarget.classList.add("hidden");
@@ -370,6 +371,16 @@ export default class extends Controller {
         this.gameOverTarget.querySelector(".score-display").after(scoreDetails);
       }
     }
+
+    // ゲームオーバー時に単語履歴を表示
+    const gameOverWordList = document.getElementById("game-over-word-list");
+    gameOverWordList.innerHTML = ""; // リストをクリア
+
+    this.gameState.usedWords.forEach((word, index) => {
+      const li = document.createElement("li");
+      li.textContent = `${index + 1}. ${word}`;
+      gameOverWordList.appendChild(li);
+    });
   }
 
   // 秒数を「○分○秒」の形式にフォーマット
