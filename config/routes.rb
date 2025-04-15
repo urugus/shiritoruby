@@ -23,6 +23,9 @@ Rails.application.routes.draw do
   # Ranking route
   get "rankings", to: "games#rankings"
 
+  # Words route
+  get "words", to: "words#index"
+
   # Defines the root path route ("/")
   root "games#index"
 end

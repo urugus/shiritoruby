@@ -334,3 +334,30 @@
     width: 100%;
   }
 }
+
+/* ページネーションのスタイル */
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.pagination a,
+.pagination .current,
+.pagination .gap {
+  padding: 8px 12px;
+  margin: 0 5px;
+  border: 1px solid #ddd;
+  text-decoration: none;
+  color: #337ab7;
+}
+
+.pagination .current {
+  background-color: #337ab7;
+  color: white;
+  border-color: #337ab7;
+}
+
+.pagination a:hover {
+  background-color: #eee;
+}

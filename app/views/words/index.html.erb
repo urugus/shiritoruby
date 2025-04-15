@@ -1,0 +1,25 @@
+<% content_for :title do %>
+  単語一覧
+<% end %>
+
+<h1>単語一覧</h1>
+
+<% if @words.present? %>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>単語</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @words.each do |word| %>
+        <tr>
+          <td><%= word.word %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+  <%= paginate @words %>
+<% else %>
+  <p>単語がありません</p>
+<% end %>
