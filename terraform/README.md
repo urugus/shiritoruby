@@ -91,23 +91,23 @@ terraform destroy
 
 ```mermaid
 flowchart TB
-    subgraph "AWS Cloud"
-        subgraph "VPC"
-            subgraph "Public Subnet AZ-a"
+    subgraph AWS_Cloud ["AWS Cloud"]
+        subgraph VPC
+            subgraph PublicSubnetAZa ["Public Subnet AZ-a"]
                 ALB["Application Load Balancer"]
                 ECS_a["ECS Fargate Tasks"]
             end
 
-            subgraph "Public Subnet AZ-c"
+            subgraph PublicSubnetAZc ["Public Subnet AZ-c"]
                 ECS_c["ECS Fargate Tasks"]
             end
 
-            subgraph "Private Subnet AZ-a"
+            subgraph PrivateSubnetAZa ["Private Subnet AZ-a"]
                 RDS_a["RDS PostgreSQL\nPrimary"]
                 SM_a["Secrets Manager\nVPC Endpoint"]
             end
 
-            subgraph "Private Subnet AZ-c"
+            subgraph PrivateSubnetAZc ["Private Subnet AZ-c"]
                 RDS_c["RDS PostgreSQL\nStandby"]
             end
 
@@ -118,12 +118,12 @@ flowchart TB
         CW["CloudWatch Logs"]
         SM["Secrets Manager"]
 
-        subgraph "IAM"
+        subgraph IAM
             ECS_Role["ECS Task Execution Role"]
             GitHub_Role["GitHub Actions Role"]
         end
 
-        subgraph "Route 53"
+        subgraph Route53 ["Route 53"]
             R53["DNS Zone"]
             ACM["ACM Certificate"]
         end
@@ -162,10 +162,7 @@ flowchart TB
     classDef external fill:#FFFFFF,stroke:#232F3E,color:#232F3E
 
     class ALB,ECS_a,ECS_c,RDS_a,RDS_c,ECR,CW,SM,SM_a,ECS_Role,GitHub_Role,R53,ACM,IGW aws
-    class "Public Subnet AZ-a" subnet
-    class "Public Subnet AZ-c" subnet
-    class "Private Subnet AZ-a" subnet
-    class "Private Subnet AZ-c" subnet
+    class PublicSubnetAZa,PublicSubnetAZc,PrivateSubnetAZa,PrivateSubnetAZc subnet
     class GitHub,User external
 ```
 
