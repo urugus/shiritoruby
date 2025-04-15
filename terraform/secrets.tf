@@ -2,7 +2,7 @@
 resource "aws_secretsmanager_secret" "rails_master_key" {
   count = var.use_existing_infrastructure ? 0 : 1
 
-  name        = "${var.app_name}/RAILS_MASTER_KEY"
+  name        = "${var.app_name}/RAILS_MASTER_KEY_NEW"
   description = "Rails Master Key for ${var.app_name}"
 }
 
@@ -16,7 +16,7 @@ resource "aws_secretsmanager_secret_version" "rails_master_key" {
 resource "aws_secretsmanager_secret" "database_url" {
   count = var.use_existing_infrastructure ? 0 : 1
 
-  name        = "${var.app_name}/DATABASE_URL"
+  name        = "${var.app_name}/DATABASE_URL_NEW"
   description = "Database URL for ${var.app_name}"
 }
 
