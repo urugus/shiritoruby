@@ -2,11 +2,11 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0"  # より安定したバージョンを指定
+      version = "~> 5.0" # より安定したバージョンを指定
     }
     external = {
       source  = "hashicorp/external"
-      version = "~> 2.3"  # 最新の安定バージョンを指定
+      version = "~> 2.3" # 最新の安定バージョンを指定
     }
   }
   required_version = ">= 1.0.0"
@@ -281,7 +281,7 @@ locals {
 
 # 既存のRDSインスタンスを参照するためのデータソース
 data "aws_db_instance" "main" {
-  count      = var.use_existing_infrastructure ? 1 : 0
+  count                  = var.use_existing_infrastructure ? 1 : 0
   db_instance_identifier = "${var.app_name}-db"
 }
 
@@ -297,7 +297,7 @@ resource "aws_db_subnet_group" "main" {
 }
 
 resource "aws_db_instance" "main" {
-  count                = var.use_existing_infrastructure ? 0 : 1
+  count                  = var.use_existing_infrastructure ? 0 : 1
   identifier             = "${var.app_name}-db"
   allocated_storage      = 20
   storage_type           = "gp2"
@@ -482,7 +482,7 @@ data "aws_cloudwatch_log_group" "app" {
 
 # ECSタスク定義
 resource "aws_ecs_task_definition" "app" {
-  count                  = var.use_existing_infrastructure ? 0 : 1
+  count                    = var.use_existing_infrastructure ? 0 : 1
   family                   = var.app_name
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
@@ -592,7 +592,7 @@ resource "aws_lb_target_group" "app" {
   # Sticky Sessionsの設定を追加
   stickiness {
     type            = "lb_cookie"
-    cookie_duration = 86400  # 1日（秒単位）
+    cookie_duration = 86400 # 1日（秒単位）
     enabled         = true
   }
 }
@@ -657,24 +657,123 @@ resource "aws_lb_listener" "http" {
 
   depends_on = [aws_lb_target_group.app]
 }
+# 既存のターゲットグループにロードバランサーが関連付けられているか確認
+resource "null_resource" "verify_target_group_association" {
+  count = var.use_existing_infrastructure ? 1 : 0
+
+  # このリソースは常に変更されたと見なされるため、適用時に毎回実行される
+  triggers = {
+    always_run = "${timestamp()}"
+  }
+
+  # ターゲットグループにロードバランサーが関連付けられているか確認するスクリプト
+  provisioner "local-exec" {
+    interpreter = ["/bin/bash", "-c"]
+    command     = <<-EOT
+      TARGET_GROUP_ARN=${var.existing_lb_target_group_arn != "" ? var.existing_lb_target_group_arn : try(data.aws_lb_target_group.app[0].arn, "")}
+      if [ -n "$TARGET_GROUP_ARN" ]; then
+        echo "ターゲットグループARN: $TARGET_GROUP_ARN を検証中..."
+
+        # ターゲットグループの存在を確認
+        aws elbv2 describe-target-groups \
+          --target-group-arns $TARGET_GROUP_ARN \
+          --region ${var.aws_region} || { echo "エラー: ターゲットグループ $TARGET_GROUP_ARN が存在しません"; exit 1; }
+
+        # ロードバランサーとの関連付けを確認
+        LB_ARNS=$(aws elbv2 describe-target-groups \
+          --target-group-arns $TARGET_GROUP_ARN \
+          --query 'TargetGroups[0].LoadBalancerArns' \
+          --output text \
+          --region ${var.aws_region})
+
+        if [ -z "$LB_ARNS" ] || [ "$LB_ARNS" == "None" ]; then
+          echo "エラー: ターゲットグループ $TARGET_GROUP_ARN にロードバランサーが関連付けられていません"
+
+          # 既存のロードバランサーARNが指定されている場合は、関連付けを試みる
+          if [ -n "${var.existing_lb_arn}" ]; then
+            echo "既存のロードバランサー ${var.existing_lb_arn} との関連付けを確認中..."
+
+            # ロードバランサーの存在を確認
+            aws elbv2 describe-load-balancers \
+              --load-balancer-arns ${var.existing_lb_arn} \
+              --region ${var.aws_region} || { echo "エラー: ロードバランサー ${var.existing_lb_arn} が存在しません"; exit 1; }
+
+            echo "ターゲットグループとロードバランサーは有効ですが、関連付けられていません。"
+            echo "aws_lb_listener リソースを通じて関連付けを作成します。"
+          else
+            echo "エラー: 既存のロードバランサーARNが指定されていないため、関連付けを作成できません"
+            exit 1
+          fi
+        else
+          echo "ターゲットグループ $TARGET_GROUP_ARN には以下のロードバランサーが関連付けられています: $LB_ARNS"
+        fi
+      else
+        echo "エラー: ターゲットグループARNが指定されていないか、取得できません"
+        exit 1
+      fi
+    EOT
+  }
+}
+
+# 既存のターゲットグループとロードバランサーの関連付け
+resource "aws_lb_listener" "existing_http" {
+  count             = var.use_existing_infrastructure && var.existing_lb_arn != "" && var.existing_lb_target_group_arn != "" ? 1 : 0
+  load_balancer_arn = var.existing_lb_arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = var.existing_lb_target_group_arn
+  }
+
+  # 明示的な依存関係を設定
+  depends_on = [null_resource.verify_target_group_association]
+}
+
+# 既存のターゲットグループが有効かどうかを確認するためのリソース
+resource "null_resource" "check_target_group_validity" {
+  count = var.use_existing_infrastructure ? 1 : 0
+
+  # このリソースは常に変更されたと見なされるため、適用時に毎回実行される
+  triggers = {
+    always_run = "${timestamp()}"
+  }
+
+  # ターゲットグループが有効かどうかを確認するスクリプト
+  provisioner "local-exec" {
+    command = <<-EOT
+      TARGET_GROUP_ARN=${var.existing_lb_target_group_arn != "" ? var.existing_lb_target_group_arn : try(data.aws_lb_target_group.app[0].arn, "")}
+      if [ -z "$TARGET_GROUP_ARN" ]; then
+        echo "エラー: 既存のターゲットグループARNが指定されていないか、取得できません"
+        exit 1
+      fi
+    EOT
+  }
+}
+
 # ターゲットグループのARNを取得するためのローカル変数
 locals {
   target_group_arn = var.use_existing_infrastructure ? (
     var.existing_lb_target_group_arn != "" ? var.existing_lb_target_group_arn : try(data.aws_lb_target_group.app[0].arn, "")
   ) : aws_lb_target_group.app[0].arn
-
-  lb_arn = var.use_existing_infrastructure ? (
-    var.existing_lb_arn != "" ? var.existing_lb_arn : try(data.aws_lb.main[0].arn, "")
-  ) : aws_lb.main[0].arn
 }
 
-# ECSサービス
-resource "aws_ecs_service" "app" {
+# 既存のインフラを使用する場合のECSサービス
+resource "aws_ecs_service" "app_existing" {
+  count           = var.use_existing_infrastructure ? 1 : 0
   name            = "${var.app_name}-service"
   cluster         = local.ecs_cluster_id
-  task_definition = var.use_existing_infrastructure ? "${var.app_name}:${var.task_definition_revision}" : aws_ecs_task_definition.app[0].arn
+  task_definition = "${var.app_name}:${var.task_definition_revision}"
   desired_count   = var.app_count
   launch_type     = "FARGATE"
+
+  # 既存のインフラを使用する場合は、検証リソースの実行後に実行されるようにする
+  depends_on = [
+    null_resource.verify_target_group_association,
+    null_resource.check_target_group_validity,
+    aws_lb_listener.existing_http
+  ]
 
   network_configuration {
     security_groups  = [local.ecs_security_group_id]
@@ -687,43 +786,39 @@ resource "aws_ecs_service" "app" {
     container_name   = var.app_name
     container_port   = 3000
   }
-  # 明示的な依存関係を設定
+}
+
+# 新しいインフラを作成する場合のECSサービス
+resource "aws_ecs_service" "app_new" {
+  count           = var.use_existing_infrastructure ? 0 : 1
+  name            = "${var.app_name}-service"
+  cluster         = local.ecs_cluster_id
+  task_definition = aws_ecs_task_definition.app[0].arn
+  desired_count   = var.app_count
+  launch_type     = "FARGATE"
+
+  # 新しいインフラを作成する場合は、ターゲットグループの作成後に実行されるようにする
   depends_on = [
     aws_lb_target_group.app
   ]
+
+  network_configuration {
+    security_groups  = [local.ecs_security_group_id]
+    subnets          = local.public_subnet_ids
+    assign_public_ip = true
+  }
+
+  load_balancer {
+    target_group_arn = local.target_group_arn
+    container_name   = var.app_name
+    container_port   = 3000
+  }
 }
 
 # GitHub OIDC Providerのサムプリントを自動的に取得
 data "external" "github_thumbprint" {
   program = ["bash", "-c", <<-EOT
     THUMBPRINT=$(openssl s_client -servername token.actions.githubusercontent.com -showcerts -connect token.actions.githubusercontent.com:443 < /dev/null 2>/dev/null | openssl x509 -fingerprint -sha1 -noout | cut -d '=' -f 2 | tr -d ':' | tr '[:upper:]' '[:lower:]')
-# GitHub Actions用の追加ポリシー
-resource "aws_iam_policy" "github_actions_additional_permissions" {
-  name        = "${var.app_name}-github-actions-additional-permissions"
-  description = "Additional permissions for GitHub Actions"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "ecr:DescribeRepositories",
-          "rds:DescribeDBInstances",
-          "secretsmanager:DescribeSecret",
-          "elasticloadbalancing:DescribeLoadBalancers",
-          "elasticloadbalancing:DescribeTargetGroups"
-        ]
-        Resource = "*"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "github_actions_additional_permissions" {
-  role       = aws_iam_role.github_actions.name
-  policy_arn = aws_iam_policy.github_actions_additional_permissions.arn
-}
     echo "{\"thumbprint\": \"$THUMBPRINT\"}"
   EOT
   ]
@@ -833,4 +928,32 @@ resource "aws_iam_role_policy" "github_actions_ecr_ecs" {
       }
     ]
   })
+}
+
+# GitHub Actions用の追加ポリシー
+resource "aws_iam_policy" "github_actions_additional_permissions" {
+  name        = "${var.app_name}-github-actions-additional-permissions"
+  description = "Additional permissions for GitHub Actions"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:DescribeRepositories",
+          "rds:DescribeDBInstances",
+          "secretsmanager:DescribeSecret",
+          "elasticloadbalancing:DescribeLoadBalancers",
+          "elasticloadbalancing:DescribeTargetGroups"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "github_actions_additional_permissions" {
+  role       = aws_iam_role.github_actions.name
+  policy_arn = aws_iam_policy.github_actions_additional_permissions.arn
 }
