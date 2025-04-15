@@ -133,8 +133,8 @@ export default class extends Controller {
       .then((data) => {
         // ゲーム状態をリセット
         this.resetGameState();
+        this.renderGameOverSection(); // Render game over section before resetting usedWords
         this.gameState.usedWords = []; // usedWordsをリセット
-
         // UIを更新
         this.startScreenTarget.classList.add("hidden");
         this.countdownTarget.classList.remove("hidden");
