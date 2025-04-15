@@ -162,7 +162,10 @@ flowchart TB
     classDef external fill:#FFFFFF,stroke:#232F3E,color:#232F3E
 
     class ALB,ECS_a,ECS_c,RDS_a,RDS_c,ECR,CW,SM,SM_a,ECS_Role,GitHub_Role,R53,ACM,IGW aws
-    class "Public Subnet AZ-a","Public Subnet AZ-c","Private Subnet AZ-a","Private Subnet AZ-c" subnet
+    class "Public Subnet AZ-a" subnet
+    class "Public Subnet AZ-c" subnet
+    class "Private Subnet AZ-a" subnet
+    class "Private Subnet AZ-c" subnet
     class GitHub,User external
 ```
 
