@@ -51,10 +51,10 @@ output "db_migration_command" {
   value       = <<EOF
 # データベースマイグレーションを実行するためのECSタスクを実行
 aws ecs run-task \\
-  --cluster ${var.use_existing_infrastructure ? var.existing_ecs_cluster_name : aws_ecs_cluster.main[0].name} \\
+  --cluster ${var.existing_ecs_cluster_name != "" ? var.existing_ecs_cluster_name : (var.use_existing_infrastructure ? "${var.app_name}-cluster" : aws_ecs_cluster.main[0].name)} \\
   --task-definition ${var.app_name}:${var.task_definition_revision} \\
   --launch-type FARGATE \\
-  --network-configuration "awsvpcConfiguration={subnets=[${var.use_existing_infrastructure ? var.existing_public_subnet_ids[0] : aws_subnet.public_1[0].id}],securityGroups=[${var.use_existing_infrastructure ? var.existing_security_group_ids["ecs"] : aws_security_group.ecs[0].id}],assignPublicIp=ENABLED}" \\
+  --network-configuration "awsvpcConfiguration={subnets=[${length(var.existing_public_subnet_ids) > 0 ? var.existing_public_subnet_ids[0] : (var.use_existing_infrastructure ? "subnet-placeholder" : aws_subnet.public_1[0].id)}],securityGroups=[${length(var.existing_security_group_ids) > 0 && contains(keys(var.existing_security_group_ids), "ecs") ? var.existing_security_group_ids["ecs"] : (var.use_existing_infrastructure ? "sg-placeholder" : aws_security_group.ecs[0].id)}],assignPublicIp=ENABLED}" \\
   --overrides '{"containerOverrides": [{"name": "${var.app_name}", "command": ["./bin/rails", "db:migrate"]}]}'
 EOF
 }

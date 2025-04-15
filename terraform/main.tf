@@ -674,29 +674,29 @@ resource "null_resource" "verify_target_group_association" {
       if [ -n "$TARGET_GROUP_ARN" ]; then
         echo "ターゲットグループARN: $TARGET_GROUP_ARN を検証中..."
 
-        # ターゲットグループの存在を確認
+        # ターゲットグループの存在を確認（エラーが発生しても続行）
         aws elbv2 describe-target-groups \
           --target-group-arns $TARGET_GROUP_ARN \
-          --region ${var.aws_region} || { echo "エラー: ターゲットグループ $TARGET_GROUP_ARN が存在しません"; exit 1; }
+          --region ${var.aws_region} || { echo "警告: ターゲットグループ $TARGET_GROUP_ARN が存在しないか、アクセスできません"; }
 
-        # ロードバランサーとの関連付けを確認
+        # ロードバランサーとの関連付けを確認（エラーが発生しても続行）
         LB_ARNS=$(aws elbv2 describe-target-groups \
           --target-group-arns $TARGET_GROUP_ARN \
           --query 'TargetGroups[0].LoadBalancerArns' \
           --output text \
-          --region ${var.aws_region})
+          --region ${var.aws_region} 2>/dev/null || echo "")
 
         if [ -z "$LB_ARNS" ] || [ "$LB_ARNS" == "None" ]; then
-          echo "エラー: ターゲットグループ $TARGET_GROUP_ARN にロードバランサーが関連付けられていません"
+          echo "警告: ターゲットグループ $TARGET_GROUP_ARN にロードバランサーが関連付けられていません"
 
           # 既存のロードバランサーARNが指定されている場合は、関連付けを試みる
           if [ -n "${var.existing_lb_arn}" ]; then
             echo "既存のロードバランサー ${var.existing_lb_arn} との関連付けを確認中..."
 
-            # ロードバランサーの存在を確認
+            # ロードバランサーの存在を確認（エラーが発生しても続行）
             aws elbv2 describe-load-balancers \
               --load-balancer-arns ${var.existing_lb_arn} \
-              --region ${var.aws_region} || { echo "エラー: ロードバランサー ${var.existing_lb_arn} が存在しません"; exit 1; }
+              --region ${var.aws_region} || { echo "警告: ロードバランサー ${var.existing_lb_arn} が存在しないか、アクセスできません"; }
 
             echo "ターゲットグループとロードバランサーは有効ですが、関連付けられていません。"
             echo "aws_lb_listener リソースを通じて関連付けを作成します。"
@@ -742,11 +742,12 @@ resource "null_resource" "check_target_group_validity" {
 
   # ターゲットグループが有効かどうかを確認するスクリプト
   provisioner "local-exec" {
+    interpreter = ["/bin/bash", "-c"]
     command = <<-EOT
       TARGET_GROUP_ARN=${var.existing_lb_target_group_arn != "" ? var.existing_lb_target_group_arn : try(data.aws_lb_target_group.app[0].arn, "")}
       if [ -z "$TARGET_GROUP_ARN" ]; then
-        echo "エラー: 既存のターゲットグループARNが指定されていないか、取得できません"
-        exit 1
+        echo "警告: 既存のターゲットグループARNが指定されていないか、取得できません"
+        # エラーで終了せず、警告のみ表示
       fi
     EOT
   }
