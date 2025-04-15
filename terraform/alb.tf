@@ -59,22 +59,34 @@ resource "aws_acm_certificate" "cert" {
   }
 }
 
-# 証明書のARNを決定するためのローカル変数
-locals {
-  certificate_arn = var.create_acm_certificate ? (
-    var.domain_name != "" ? aws_acm_certificate.cert[0].arn : null
-  ) : var.acm_certificate_arn
-}
-
 # HTTPSリスナー
 resource "aws_lb_listener" "https" {
-  count = (!var.use_existing_infrastructure && local.certificate_arn != null) ? 1 : 0
+  count = (!var.use_existing_infrastructure && var.create_acm_certificate && var.domain_name != "") ? 1 : 0
 
   load_balancer_arn = aws_lb.main[0].arn
   port              = 443
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-2016-08"
-  certificate_arn   = local.certificate_arn
+  certificate_arn   = aws_acm_certificate.cert[0].arn
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.app[0].arn
+  }
+
+  # 明示的な依存関係を設定
+  depends_on = [aws_lb_target_group.app, aws_acm_certificate.cert]
+}
+
+# 既存の証明書を使用する場合のHTTPSリスナー
+resource "aws_lb_listener" "https_existing_cert" {
+  count = (!var.use_existing_infrastructure && !var.create_acm_certificate && var.acm_certificate_arn != "") ? 1 : 0
+
+  load_balancer_arn = aws_lb.main[0].arn
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-2016-08"
+  certificate_arn   = var.acm_certificate_arn
 
   default_action {
     type             = "forward"
