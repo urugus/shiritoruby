@@ -84,3 +84,114 @@ terraform destroy
 - データベースのバックアップ設定を適切に行ってください。
 - セキュリティのため、IAMポリシーとセキュリティグループの設定を環境に合わせて調整してください。
 - RDSのマスターユーザーパスワード（`db_password`）には、`'/'`, `'@'`, `'"'`, スペースを除く印刷可能なASCII文字のみを使用できます。これらの文字を含むパスワードを設定するとデプロイが失敗します。
+
+## アーキテクチャ図
+
+以下は、ShiritoRubyアプリケーションのAWS Fargateデプロイアーキテクチャを示しています：
+
+```mermaid
+flowchart TB
+    subgraph AWS_Cloud ["AWS Cloud"]
+        subgraph VPC
+            subgraph PublicSubnetAZa ["Public Subnet AZ-a"]
+                ALB["Application Load Balancer"]
+                ECS_a["ECS Fargate Tasks"]
+            end
+
+            subgraph PublicSubnetAZc ["Public Subnet AZ-c"]
+                ECS_c["ECS Fargate Tasks"]
+            end
+
+            subgraph PrivateSubnetAZa ["Private Subnet AZ-a"]
+                RDS_a["RDS PostgreSQL\nPrimary"]
+                SM_a["Secrets Manager\nVPC Endpoint"]
+            end
+
+            subgraph PrivateSubnetAZc ["Private Subnet AZ-c"]
+                RDS_c["RDS PostgreSQL\nStandby"]
+            end
+
+            IGW["Internet Gateway"]
+        end
+
+        ECR["ECR Repository"]
+        CW["CloudWatch Logs"]
+        SM["Secrets Manager"]
+
+        subgraph IAM
+            ECS_Role["ECS Task Execution Role"]
+            GitHub_Role["GitHub Actions Role"]
+        end
+
+        subgraph Route53 ["Route 53"]
+            R53["DNS Zone"]
+            ACM["ACM Certificate"]
+        end
+    end
+
+    GitHub["GitHub Actions"]
+    User["User"]
+
+    %% 接続関係
+    User -->|HTTPS| R53
+    R53 -->|DNS| ALB
+    GitHub -->|OIDC| GitHub_Role
+    GitHub_Role -->|Push| ECR
+    GitHub_Role -->|Deploy| ECS_a
+
+    IGW <-->|Internet| ALB
+    ALB -->|Target Group| ECS_a
+    ALB -->|Target Group| ECS_c
+    ECS_a -->|Logs| CW
+    ECS_c -->|Logs| CW
+    ECS_a -->|DB Connection| RDS_a
+    ECS_c -->|DB Connection| RDS_a
+    ECS_a -->|Secrets| SM
+    ECS_c -->|Secrets| SM
+    ECS_a -->|VPC Endpoint| SM_a
+    ECS_c -->|VPC Endpoint| SM_a
+    ECS_Role -->|Assume Role| ECS_a
+    ECS_Role -->|Assume Role| ECS_c
+    ECR -->|Image| ECS_a
+    ECR -->|Image| ECS_c
+    ACM -->|Certificate| ALB
+
+    %% スタイル
+    classDef aws fill:#FF9900,stroke:#232F3E,color:#232F3E
+    classDef subnet fill:#F8F8F8,stroke:#999999
+    classDef external fill:#FFFFFF,stroke:#232F3E,color:#232F3E
+
+    class ALB,ECS_a,ECS_c,RDS_a,RDS_c,ECR,CW,SM,SM_a,ECS_Role,GitHub_Role,R53,ACM,IGW aws
+    class PublicSubnetAZa,PublicSubnetAZc,PrivateSubnetAZa,PrivateSubnetAZc subnet
+    class GitHub,User external
+```
+
+この図は以下のコンポーネントを示しています：
+
+1. **ネットワーク構成**：
+   - VPC内の2つのアベイラビリティゾーン（AZ-aとAZ-c）
+   - 各AZにパブリックサブネットとプライベートサブネット
+   - インターネットゲートウェイによる外部接続
+
+2. **コンピューティング**：
+   - ECS Fargateタスク（複数のAZに分散）
+   - ECRリポジトリ（コンテナイメージの保存）
+
+3. **データベース**：
+   - RDS PostgreSQLインスタンス（プライベートサブネット内）
+
+4. **ネットワーキング**：
+   - Application Load Balancer（パブリックサブネット内）
+   - Route 53 DNSゾーン
+   - ACM証明書（HTTPS用）
+
+5. **セキュリティ**：
+   - IAMロール（ECSタスク実行用とGitHub Actions用）
+   - Secrets Manager（機密情報の管理）
+   - VPCエンドポイント（プライベートサブネットからのAWSサービスアクセス）
+
+6. **モニタリング**：
+   - CloudWatchログ（アプリケーションログの収集）
+
+7. **CI/CD**：
+   - GitHub ActionsからのOIDC認証によるデプロイ
