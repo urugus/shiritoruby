@@ -5,16 +5,18 @@
 <h1>単語一覧</h1>
 
 <% if @words.present? %>
-  <table class="table">
+  <table class="table table-striped">
     <thead>
       <tr>
         <th>単語</th>
+        <th></th>
       </tr>
     </thead>
     <tbody>
       <% @words.each do |word| %>
         <tr>
-          <td><%= word.word %></td>
+          <td style="font-size: 1.2em; font-family: sans-serif;"><div class="word-box"><%= word.word %></div></td>
+          <td></td>
         </tr>
       <% end %>
     </tbody>
