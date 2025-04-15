@@ -72,6 +72,8 @@ resource "aws_iam_role" "ecs_task_role" {
 
 # ECS Execを有効にするためのポリシー
 resource "aws_iam_policy" "ecs_exec_policy" {
+  count = var.use_existing_infrastructure ? 0 : 1
+
   name        = "${var.app_name}-ecs-exec-policy"
   description = "Allow ECS Exec functionality"
 
@@ -94,6 +96,8 @@ resource "aws_iam_policy" "ecs_exec_policy" {
 
 # タスクロールにECS Execポリシーをアタッチ
 resource "aws_iam_role_policy_attachment" "ecs_exec_policy_attachment" {
+  count = var.use_existing_infrastructure ? 0 : 1
+
   role       = aws_iam_role.ecs_task_role.name
-  policy_arn = aws_iam_policy.ecs_exec_policy.arn
+  policy_arn = var.use_existing_infrastructure ? "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/${var.app_name}-ecs-exec-policy" : aws_iam_policy.ecs_exec_policy[0].arn
 }
