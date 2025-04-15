@@ -129,7 +129,8 @@ class Api::GamesController < ApplicationController
     end
 
     # 既存のゲームからセッションマネージャーを再構築
-    @session_manager = Games::SessionManager.new(game.player_name)
+    # create_game_flag = false を指定して新しいゲームが作成されないようにする
+    @session_manager = Games::SessionManager.new(game.player_name, 10, false)
     @session_manager.instance_variable_set(:@game, game)
     @session_manager.instance_variable_set(:@start_time, game.created_at)
 

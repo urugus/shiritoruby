@@ -23,14 +23,15 @@ module Games
     # 新しいゲームセッションを初期化
     # @param player_name [String] プレイヤー名
     # @param time_limit [Integer] 制限時間（秒）
-    def initialize(player_name, time_limit = 10)
+    # @param create_game_flag [Boolean] ゲームを作成するかどうか
+    def initialize(player_name, time_limit = 10, create_game_flag = true)
       @player_name = player_name
       @time_limit = time_limit
       @current_state = GAME_STATE[:waiting_for_player]
       @used_words = []
       @end_reason = nil
       @start_time = Time.current
-      create_game
+      create_game if create_game_flag
     end
 
     # ゲームを作成し、初期化する
