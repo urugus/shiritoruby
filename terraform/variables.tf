@@ -63,3 +63,27 @@ variable "acm_certificate_arn" {
   type        = string
   default     = ""
 }
+
+variable "use_existing_infrastructure" {
+  description = "Whether to use existing infrastructure"
+  type        = bool
+  default     = false
+}
+
+variable "existing_lb_arn" {
+  description = "ARN of an existing load balancer"
+  type        = string
+  default     = ""
+}
+
+variable "existing_lb_target_group_arn" {
+  description = "ARN of an existing target group"
+  type        = string
+  default     = ""
+}
+
+variable "task_definition_revision" {
+  description = "Revision of the task definition"
+  type        = string
+  default     = "1"
+}

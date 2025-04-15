@@ -5,12 +5,12 @@ output "ecr_repository_url" {
 
 output "alb_dns_name" {
   description = "The DNS name of the load balancer"
-  value       = aws_lb.main.dns_name
+  value       = var.use_existing_infrastructure ? "Using existing load balancer" : aws_lb.main[0].dns_name
 }
 
 output "database_endpoint" {
   description = "The endpoint of the database"
-  value       = aws_db_instance.main.endpoint
+  value       = var.use_existing_infrastructure ? "Using existing database" : aws_db_instance.main[0].endpoint
 }
 
 output "ecs_cluster_name" {
@@ -54,7 +54,7 @@ aws ecs run-task \\
   --cluster ${aws_ecs_cluster.main.name} \\
   --task-definition ${aws_ecs_task_definition.app.family}:${aws_ecs_task_definition.app.revision} \\
   --launch-type FARGATE \\
-  --network-configuration "awsvpcConfiguration={subnets=[${aws_subnet.private_1.id}],securityGroups=[${aws_security_group.ecs.id}],assignPublicIp=ENABLED}" \\
+  --network-configuration "awsvpcConfiguration={subnets=[${var.use_existing_infrastructure ? "subnet-xxxxx" : aws_subnet.private_1[0].id}],securityGroups=[${var.use_existing_infrastructure ? "sg-xxxxx" : aws_security_group.ecs[0].id}],assignPublicIp=ENABLED}" \\
   --overrides '{"containerOverrides": [{"name": "${var.app_name}", "command": ["./bin/rails", "db:migrate"]}]}'
 EOF
 }
