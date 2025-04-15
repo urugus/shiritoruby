@@ -61,12 +61,12 @@ EOF
 
 output "route53_nameservers" {
   description = "The nameservers for the Route 53 zone"
-  value       = var.domain_name != "" ? aws_route53_zone.main.name_servers : []
+  value       = var.domain_name != "" ? (length(aws_route53_zone.main) > 0 ? aws_route53_zone.main[0].name_servers : []) : []
 }
 
 output "domain_setup_instructions" {
   description = "Instructions for setting up the domain with Route 53"
-  value       = var.domain_name != "" ? "# Route 53でのドメイン設定手順\n\n1. 以下のネームサーバーをドメインレジストラに設定してください：\n   ${join("\n   ", formatlist("- %s", aws_route53_zone.main.name_servers))}\n\n2. ネームサーバーの変更が反映されるまで、最大48時間かかる場合があります。\n\n3. DNSの伝播状況は以下のコマンドで確認できます：\n   dig ${var.domain_name} NS\n\n4. 証明書の検証が完了したら、以下のURLでアプリケーションにアクセスできます：\n   - https://${var.domain_name}\n   - https://www.${var.domain_name}" : "ドメイン名が設定されていません。"
+  value       = var.domain_name != "" ? (length(aws_route53_zone.main) > 0 ? "# Route 53でのドメイン設定手順\n\n1. 以下のネームサーバーをドメインレジストラに設定してください：\n   ${join("\n   ", formatlist("- %s", aws_route53_zone.main[0].name_servers))}\n\n2. ネームサーバーの変更が反映されるまで、最大48時間かかる場合があります。\n\n3. DNSの伝播状況は以下のコマンドで確認できます：\n   dig ${var.domain_name} NS\n\n4. 証明書の検証が完了したら、以下のURLでアプリケーションにアクセスできます：\n   - https://${var.domain_name}\n   - https://www.${var.domain_name}" : "ホストゾーンが作成されていません。") : "ドメイン名が設定されていません。"
 }
 
 output "github_actions_role_arn" {

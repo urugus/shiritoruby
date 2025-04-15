@@ -1,5 +1,7 @@
 # Route 53 ホストゾーン
 resource "aws_route53_zone" "main" {
+  count = var.domain_name != "" ? 1 : 0
+
   name = var.domain_name
 
   tags = {
@@ -11,7 +13,7 @@ resource "aws_route53_zone" "main" {
 resource "aws_route53_record" "cert_validation" {
   count = var.create_acm_certificate && var.domain_name != "" ? length(aws_acm_certificate.cert[0].domain_validation_options) : 0
 
-  zone_id = aws_route53_zone.main.zone_id
+  zone_id = aws_route53_zone.main[0].zone_id
   name    = element(aws_acm_certificate.cert[0].domain_validation_options.*.resource_record_name, count.index)
   type    = element(aws_acm_certificate.cert[0].domain_validation_options.*.resource_record_type, count.index)
   records = [element(aws_acm_certificate.cert[0].domain_validation_options.*.resource_record_value, count.index)]
@@ -30,7 +32,7 @@ resource "aws_acm_certificate_validation" "cert" {
 resource "aws_route53_record" "alb" {
   count = var.domain_name != "" ? 1 : 0
 
-  zone_id = aws_route53_zone.main.zone_id
+  zone_id = aws_route53_zone.main[0].zone_id
   name    = var.domain_name
   type    = "A"
 
@@ -45,7 +47,7 @@ resource "aws_route53_record" "alb" {
 resource "aws_route53_record" "www" {
   count = var.domain_name != "" ? 1 : 0
 
-  zone_id = aws_route53_zone.main.zone_id
+  zone_id = aws_route53_zone.main[0].zone_id
   name    = "www.${var.domain_name}"
   type    = "A"
 
