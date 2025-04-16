@@ -1,5 +1,6 @@
 # ECRリポジトリ
 resource "aws_ecr_repository" "shiritoruby" {
+  count                = var.use_existing_infrastructure ? 0 : 1
   name                 = var.app_name
   image_tag_mutability = "MUTABLE"
 
@@ -10,6 +11,7 @@ resource "aws_ecr_repository" "shiritoruby" {
 
 # ECSクラスター
 resource "aws_ecs_cluster" "main" {
+  count = var.use_existing_infrastructure ? 0 : 1
   name = "${var.app_name}-cluster"
 
   setting {
@@ -20,18 +22,19 @@ resource "aws_ecs_cluster" "main" {
 
 # ECSタスク定義
 resource "aws_ecs_task_definition" "app" {
+  count                    = var.use_existing_infrastructure ? 0 : 1
   family                   = var.app_name
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = var.task_cpu
   memory                   = var.task_memory
-  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
-  task_role_arn            = aws_iam_role.ecs_task_role.arn
+  execution_role_arn       = aws_iam_role.ecs_task_execution_role[0].arn
+  task_role_arn            = aws_iam_role.ecs_task_role[0].arn
 
   container_definitions = jsonencode([
     {
       name      = var.app_name
-      image     = "${aws_ecr_repository.shiritoruby.repository_url}:latest"
+      image     = "${aws_ecr_repository.shiritoruby[0].repository_url}:latest"
       essential = true
       portMappings = [
         {
@@ -73,15 +76,17 @@ resource "aws_ecs_task_definition" "app" {
 
 # CloudWatch Logsグループ
 resource "aws_cloudwatch_log_group" "app" {
+  count             = var.use_existing_infrastructure ? 0 : 1
   name              = "/ecs/${var.app_name}"
   retention_in_days = 30
 }
 
 # ECSサービス
 resource "aws_ecs_service" "app" {
+  count           = var.use_existing_infrastructure ? 0 : 1
   name            = "${var.app_name}-service"
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.app.arn
+  cluster         = aws_ecs_cluster.main[0].id
+  task_definition = aws_ecs_task_definition.app[0].arn
   desired_count   = var.app_count
   launch_type     = "FARGATE"
   enable_execute_command = true

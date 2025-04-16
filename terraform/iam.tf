@@ -1,5 +1,6 @@
 # IAMロール
 resource "aws_iam_role" "ecs_task_execution_role" {
+  count = var.use_existing_infrastructure ? 0 : 1
   name = "${var.app_name}-ecs-task-execution-role"
 
   assume_role_policy = jsonencode({
@@ -17,7 +18,8 @@ resource "aws_iam_role" "ecs_task_execution_role" {
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
-  role       = aws_iam_role.ecs_task_execution_role.name
+  count      = var.use_existing_infrastructure ? 0 : 1
+  role       = aws_iam_role.ecs_task_execution_role[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
@@ -48,12 +50,13 @@ resource "aws_iam_policy" "secrets_access" {
 resource "aws_iam_role_policy_attachment" "secrets_access" {
   count = var.use_existing_infrastructure ? 0 : 1
 
-  role       = aws_iam_role.ecs_task_execution_role.name
+  role       = aws_iam_role.ecs_task_execution_role[0].name
   policy_arn = aws_iam_policy.secrets_access[0].arn
 }
 
 # ECS Execを有効にするためのタスクロール
 resource "aws_iam_role" "ecs_task_role" {
+  count = var.use_existing_infrastructure ? 0 : 1
   name = "${var.app_name}-ecs-task-role"
 
   assume_role_policy = jsonencode({
@@ -98,6 +101,6 @@ resource "aws_iam_policy" "ecs_exec_policy" {
 resource "aws_iam_role_policy_attachment" "ecs_exec_policy_attachment" {
   count = var.use_existing_infrastructure ? 0 : 1
 
-  role       = aws_iam_role.ecs_task_role.name
+  role       = aws_iam_role.ecs_task_role[0].name
   policy_arn = var.use_existing_infrastructure ? "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/${var.app_name}-ecs-exec-policy" : aws_iam_policy.ecs_exec_policy[0].arn
 }
