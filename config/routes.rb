@@ -21,7 +21,7 @@ Rails.application.routes.draw do
   end
 
   # Words management route
-  resources :words, only: [:index] do
+  resources :words, only: [:index, :destroy] do
     collection do
       get :download
       post :upload

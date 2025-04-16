@@ -13,6 +13,29 @@ RSpec.describe WordsController, type: :controller do
       get :index
       expect(response).to be_successful
     end
+
+    context "with search query" do
+      it "filters words by query" do
+        word1 = create(:word, word: "search_test", description: "This is a test")
+        word2 = create(:word, word: "another_word", description: "Another description")
+        word3 = create(:word, word: "test_word", description: "Contains search term")
+
+        # 検索前の単語数を確認
+        expect(Word.count).to eq(3)
+
+        # 検索クエリを実行
+        get :index, params: { query: "search" }
+
+        # レスポンスが成功することを確認
+        expect(response).to be_successful
+
+        # 直接データベースに問い合わせて検索結果を確認
+        filtered_words = Word.where("word LIKE ? OR description LIKE ?", "%search%", "%search%")
+        expect(filtered_words).to include(word1)
+        expect(filtered_words).to include(word3)
+        expect(filtered_words).not_to include(word2)
+      end
+    end
   end
 
   describe "GET #download" do
@@ -133,6 +156,27 @@ RSpec.describe WordsController, type: :controller do
         expect(response).to redirect_to(words_path)
         expect(flash[:alert]).to include("CSVファイルのみアップロード可能です")
       end
+    end
+  end
+
+  describe "DELETE #destroy" do
+    it "deletes the word" do
+      word = create(:word, word: "delete_test")
+
+      expect {
+        delete :destroy, params: { id: word.id }
+      }.to change(Word, :count).by(-1)
+
+      expect(Word.find_by(id: word.id)).to be_nil
+    end
+
+    it "redirects to words_path with a success message" do
+      word = create(:word, word: "delete_test2")
+
+      delete :destroy, params: { id: word.id }
+
+      expect(response).to redirect_to(words_path)
+      expect(flash[:notice]).to include("削除しました")
     end
   end
 end

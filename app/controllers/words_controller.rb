@@ -2,7 +2,27 @@ class WordsController < ApplicationController
   require "csv"
 
   def index
-    @words = Word.all.order(:word).page(params[:page]).per(50)
+    @query = params[:query]
+    @words = Word.all
+
+    # 検索クエリがある場合は絞り込み
+    if @query.present?
+      @words = @words.where("word LIKE ? OR description LIKE ?", "%#{@query}%", "%#{@query}%")
+    end
+
+    @words = @words.order(:word).page(params[:page]).per(50)
+  end
+
+  def destroy
+    @word = Word.find(params[:id])
+
+    if @word.destroy
+      flash[:notice] = "単語「#{@word.word}」を削除しました。"
+    else
+      flash[:alert] = "単語の削除に失敗しました。"
+    end
+
+    redirect_to words_path
   end
 
   def download
