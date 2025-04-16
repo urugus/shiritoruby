@@ -105,7 +105,8 @@ resource "aws_iam_role_policy" "github_actions_terraform" {
           "acm:RequestCertificate",
           "acm:DescribeCertificate",
           "acm:ListCertificates",
-          "acm:AddTagsToCertificate"
+          "acm:AddTagsToCertificate",
+          "acm:ListTagsForCertificate"
         ]
         Resource = "*"
       },
@@ -142,7 +143,9 @@ resource "aws_iam_role_policy" "github_actions_terraform" {
           "route53:GetHostedZone",
           "route53:ListHostedZones",
           "route53:ChangeResourceRecordSets",
-          "route53:ListResourceRecordSets"
+          "route53:ListResourceRecordSets",
+          "route53:ChangeTagsForResource",
+          "route53:GetChange"
         ]
         Resource = "*"
       },
@@ -176,7 +179,9 @@ resource "aws_iam_role_policy" "github_actions_terraform" {
           "ec2:AuthorizeSecurityGroupIngress",
           "ec2:AuthorizeSecurityGroupEgress",
           "ec2:CreateTags",
-          "ec2:AssociateRouteTable"
+          "ec2:AssociateRouteTable",
+          "ec2:ModifyVpcAttribute",
+          "ec2:DescribeVpcAttribute"
         ]
         Resource = "*"
       },
