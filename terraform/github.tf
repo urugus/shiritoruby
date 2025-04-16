@@ -9,6 +9,7 @@ data "external" "github_thumbprint" {
 
 # GitHub OIDC Provider
 resource "aws_iam_openid_connect_provider" "github" {
+  count           = var.use_existing_infrastructure ? 0 : 1
   url             = "https://token.actions.githubusercontent.com"
   client_id_list  = ["sts.amazonaws.com"]
   thumbprint_list = [data.external.github_thumbprint.result.thumbprint]
@@ -16,6 +17,7 @@ resource "aws_iam_openid_connect_provider" "github" {
 
 # GitHub Actions用のIAMロール
 resource "aws_iam_role" "github_actions" {
+  count = var.use_existing_infrastructure ? 0 : 1
   name = "github-actions-role"
 
   assume_role_policy = jsonencode({
@@ -24,7 +26,7 @@ resource "aws_iam_role" "github_actions" {
       {
         Effect = "Allow"
         Principal = {
-          Federated = aws_iam_openid_connect_provider.github.arn
+          Federated = aws_iam_openid_connect_provider.github[0].arn
         }
         Action = "sts:AssumeRoleWithWebIdentity"
         Condition = {
@@ -42,8 +44,9 @@ resource "aws_iam_role" "github_actions" {
 
 # ECRとECSの権限をロールに付与
 resource "aws_iam_role_policy" "github_actions_ecr_ecs" {
+  count = var.use_existing_infrastructure ? 0 : 1
   name = "github-actions-ecr-ecs-policy"
-  role = aws_iam_role.github_actions.id
+  role = aws_iam_role.github_actions[0].id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -93,8 +96,9 @@ resource "aws_iam_role_policy" "github_actions_ecr_ecs" {
 
 # Terraformインフラ作成のための追加権限
 resource "aws_iam_role_policy" "github_actions_terraform" {
+  count = var.use_existing_infrastructure ? 0 : 1
   name = "github-actions-terraform-policy"
-  role = aws_iam_role.github_actions.id
+  role = aws_iam_role.github_actions[0].id
 
   policy = jsonencode({
     Version = "2012-10-17"
