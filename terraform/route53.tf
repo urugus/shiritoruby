@@ -1,6 +1,6 @@
 # Route 53 ホストゾーン
 resource "aws_route53_zone" "main" {
-  count = var.domain_name != "" ? 1 : 0
+  count = var.domain_name != "" && !var.use_existing_infrastructure ? 1 : 0
 
   name = var.domain_name
 
@@ -11,7 +11,7 @@ resource "aws_route53_zone" "main" {
 
 # ACM証明書のDNS検証レコード
 resource "aws_route53_record" "cert_validation" {
-  count = var.create_acm_certificate && var.domain_name != "" ? length(aws_acm_certificate.cert[0].domain_validation_options) : 0
+  count = var.create_acm_certificate && var.domain_name != "" && !var.use_existing_infrastructure ? length(aws_acm_certificate.cert[0].domain_validation_options) : 0
 
   zone_id = aws_route53_zone.main[0].zone_id
   name    = element(aws_acm_certificate.cert[0].domain_validation_options.*.resource_record_name, count.index)
@@ -22,7 +22,7 @@ resource "aws_route53_record" "cert_validation" {
 
 # ACM証明書の検証完了を待機
 resource "aws_acm_certificate_validation" "cert" {
-  count = var.create_acm_certificate && var.domain_name != "" ? 1 : 0
+  count = var.create_acm_certificate && var.domain_name != "" && !var.use_existing_infrastructure ? 1 : 0
 
   certificate_arn         = aws_acm_certificate.cert[0].arn
   validation_record_fqdns = aws_route53_record.cert_validation.*.fqdn
@@ -30,7 +30,7 @@ resource "aws_acm_certificate_validation" "cert" {
 
 # ALBへのエイリアスレコード
 resource "aws_route53_record" "alb" {
-  count = var.domain_name != "" ? 1 : 0
+  count = var.domain_name != "" && !var.use_existing_infrastructure ? 1 : 0
 
   zone_id = aws_route53_zone.main[0].zone_id
   name    = var.domain_name
@@ -45,7 +45,7 @@ resource "aws_route53_record" "alb" {
 
 # www サブドメインのエイリアスレコード
 resource "aws_route53_record" "www" {
-  count = var.domain_name != "" ? 1 : 0
+  count = var.domain_name != "" && !var.use_existing_infrastructure ? 1 : 0
 
   zone_id = aws_route53_zone.main[0].zone_id
   name    = "www.${var.domain_name}"

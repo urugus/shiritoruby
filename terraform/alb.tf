@@ -46,7 +46,7 @@ resource "aws_lb_target_group" "app" {
 
 # ACM証明書（条件付き作成）
 resource "aws_acm_certificate" "cert" {
-  count             = var.create_acm_certificate && var.domain_name != "" ? 1 : 0
+  count             = var.create_acm_certificate && var.domain_name != "" && !var.use_existing_infrastructure ? 1 : 0
   domain_name       = var.domain_name
   validation_method = "DNS"
 
