@@ -58,7 +58,8 @@ resource "aws_iam_role_policy" "github_actions_ecr_ecs" {
           "ecr:InitiateLayerUpload",
           "ecr:UploadLayerPart",
           "ecr:CompleteLayerUpload",
-          "ecr:PutImage"
+          "ecr:PutImage",
+          "ecr:CreateRepository"
         ]
         Resource = "*"
       },
@@ -69,7 +70,8 @@ resource "aws_iam_role_policy" "github_actions_ecr_ecs" {
           "ecs:RegisterTaskDefinition",
           "ecs:UpdateService",
           "ecs:DescribeServices",
-          "ecs:RunTask"
+          "ecs:RunTask",
+          "ecs:CreateCluster"
         ]
         Resource = "*"
       },
@@ -84,6 +86,123 @@ resource "aws_iam_role_policy" "github_actions_ecr_ecs" {
             "iam:PassedToService" : "ecs-tasks.amazonaws.com"
           }
         }
+      }
+    ]
+  })
+}
+
+# Terraformインフラ作成のための追加権限
+resource "aws_iam_role_policy" "github_actions_terraform" {
+  name = "github-actions-terraform-policy"
+  role = aws_iam_role.github_actions.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "acm:RequestCertificate",
+          "acm:DescribeCertificate",
+          "acm:ListCertificates",
+          "acm:AddTagsToCertificate"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:DescribeLogGroups",
+          "logs:PutRetentionPolicy",
+          "logs:TagResource"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "iam:CreateOpenIDConnectProvider",
+          "iam:GetOpenIDConnectProvider",
+          "iam:TagOpenIDConnectProvider",
+          "iam:CreateRole",
+          "iam:GetRole",
+          "iam:TagRole",
+          "iam:CreatePolicy",
+          "iam:GetPolicy",
+          "iam:AttachRolePolicy",
+          "iam:ListAttachedRolePolicies"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "route53:CreateHostedZone",
+          "route53:GetHostedZone",
+          "route53:ListHostedZones",
+          "route53:ChangeResourceRecordSets",
+          "route53:ListResourceRecordSets"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:CreateSecret",
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret",
+          "secretsmanager:PutSecretValue",
+          "secretsmanager:TagResource"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:CreateVpc",
+          "ec2:DescribeVpcs",
+          "ec2:CreateSubnet",
+          "ec2:DescribeSubnets",
+          "ec2:CreateRouteTable",
+          "ec2:DescribeRouteTables",
+          "ec2:CreateRoute",
+          "ec2:DescribeRoutes",
+          "ec2:CreateInternetGateway",
+          "ec2:DescribeInternetGateways",
+          "ec2:AttachInternetGateway",
+          "ec2:CreateSecurityGroup",
+          "ec2:DescribeSecurityGroups",
+          "ec2:AuthorizeSecurityGroupIngress",
+          "ec2:AuthorizeSecurityGroupEgress",
+          "ec2:CreateTags",
+          "ec2:AssociateRouteTable"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "elasticloadbalancing:CreateLoadBalancer",
+          "elasticloadbalancing:DescribeLoadBalancers",
+          "elasticloadbalancing:CreateTargetGroup",
+          "elasticloadbalancing:DescribeTargetGroups",
+          "elasticloadbalancing:CreateListener",
+          "elasticloadbalancing:DescribeListeners",
+          "elasticloadbalancing:AddTags"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "rds:CreateDBInstance",
+          "rds:DescribeDBInstances",
+          "rds:CreateDBSubnetGroup",
+          "rds:DescribeDBSubnetGroups",
+          "rds:AddTagsToResource"
+        ]
+        Resource = "*"
       }
     ]
   })
