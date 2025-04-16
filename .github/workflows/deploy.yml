@@ -158,4 +158,5 @@ jobs:
             -var="create_acm_certificate=${{ secrets.TF_VAR_CREATE_ACM_CERTIFICATE || vars.TF_VAR_CREATE_ACM_CERTIFICATE || 'true' }}" \
             -var="acm_certificate_arn=${{ secrets.TF_VAR_ACM_CERTIFICATE_ARN || vars.TF_VAR_ACM_CERTIFICATE_ARN || '' }}" \
             -var="existing_lb_dns_name=${{ secrets.TF_VAR_EXISTING_LB_DNS_NAME || vars.TF_VAR_EXISTING_LB_DNS_NAME || '' }}" \
-            -var="existing_lb_zone_id=${{ secrets.TF_VAR_EXISTING_LB_ZONE_ID || vars.TF_VAR_EXISTING_LB_ZONE_ID || '' }}"
+            -var="existing_lb_zone_id=${{ secrets.TF_VAR_EXISTING_LB_ZONE_ID || vars.TF_VAR_EXISTING_LB_ZONE_ID || '' }}" \
+            -var="use_existing_infrastructure=true"
