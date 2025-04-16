@@ -376,21 +376,106 @@ export default class extends Controller {
     const gameOverWordList = document.getElementById("game-over-word-list");
     gameOverWordList.innerHTML = ""; // リストをクリア
 
-    this.gameState.usedWords.forEach((word, index) => {
-      const li = document.createElement("li");
-      const player = index % 2 === 0 ? "player" : "computer";
-      li.className = player === "player" ? "player-word" : "computer-word";
+    // テーブルヘッダーを作成
+    const tableHeader = document.createElement("li");
+    tableHeader.className = "word-header";
 
-      // 単語と番号を表示
-      const turnNumber = index + 1;
-      const turnNumberSpan = document.createElement("span");
-      turnNumberSpan.textContent = `${turnNumber}. ${word}`;
-      const playerSpan = document.createElement("span");
-      playerSpan.textContent = player === "player" ? "あなた" : "コンピューター";
-      li.appendChild(turnNumberSpan);
-      li.appendChild(playerSpan);
-      gameOverWordList.appendChild(li);
-    });
+    const turnHeader = document.createElement("span");
+    turnHeader.className = "word-turn";
+    turnHeader.textContent = "ターン";
+
+    const wordHeader = document.createElement("span");
+    wordHeader.className = "word-text";
+    wordHeader.textContent = "単語";
+
+    const playerHeader = document.createElement("span");
+    playerHeader.className = "word-player";
+    playerHeader.textContent = "プレイヤー";
+
+    const descHeader = document.createElement("span");
+    descHeader.className = "word-description";
+    descHeader.textContent = "説明";
+
+    tableHeader.appendChild(turnHeader);
+    tableHeader.appendChild(wordHeader);
+    tableHeader.appendChild(playerHeader);
+    tableHeader.appendChild(descHeader);
+    gameOverWordList.appendChild(tableHeader);
+
+    // APIから単語の説明が含まれている場合はそれを使用
+    if (
+      data.words_with_descriptions &&
+      data.words_with_descriptions.length > 0
+    ) {
+      data.words_with_descriptions.forEach((wordData, index) => {
+        const li = document.createElement("li");
+        li.className =
+          wordData.player === "player" ? "player-word" : "computer-word";
+
+        // ターン番号
+        const turnNumber = index + 1;
+        const turnNumberSpan = document.createElement("span");
+        turnNumberSpan.className = "word-turn";
+        turnNumberSpan.textContent = turnNumber;
+
+        // 単語
+        const wordSpan = document.createElement("span");
+        wordSpan.className = "word-text";
+        wordSpan.textContent = wordData.word;
+
+        // プレイヤー
+        const playerSpan = document.createElement("span");
+        playerSpan.className = "word-player";
+        playerSpan.textContent =
+          wordData.player === "player" ? "あなた" : "コンピューター";
+
+        // 説明
+        const descSpan = document.createElement("span");
+        descSpan.className = "word-description";
+        descSpan.textContent = wordData.description || "説明なし";
+
+        li.appendChild(turnNumberSpan);
+        li.appendChild(wordSpan);
+        li.appendChild(playerSpan);
+        li.appendChild(descSpan);
+        gameOverWordList.appendChild(li);
+      });
+    } else {
+      // 後方互換性のために残す（APIが更新されていない場合）
+      this.gameState.usedWords.forEach((word, index) => {
+        const li = document.createElement("li");
+        const player = index % 2 === 0 ? "player" : "computer";
+        li.className = player === "player" ? "player-word" : "computer-word";
+
+        // ターン番号
+        const turnNumber = index + 1;
+        const turnNumberSpan = document.createElement("span");
+        turnNumberSpan.className = "word-turn";
+        turnNumberSpan.textContent = turnNumber;
+
+        // 単語
+        const wordSpan = document.createElement("span");
+        wordSpan.className = "word-text";
+        wordSpan.textContent = word;
+
+        // プレイヤー
+        const playerSpan = document.createElement("span");
+        playerSpan.className = "word-player";
+        playerSpan.textContent =
+          player === "player" ? "あなた" : "コンピューター";
+
+        // 説明（データがない場合）
+        const descSpan = document.createElement("span");
+        descSpan.className = "word-description";
+        descSpan.textContent = "説明なし";
+
+        li.appendChild(turnNumberSpan);
+        li.appendChild(wordSpan);
+        li.appendChild(playerSpan);
+        li.appendChild(descSpan);
+        gameOverWordList.appendChild(li);
+      });
+    }
   }
 
   // 秒数を「○分○秒」の形式にフォーマット

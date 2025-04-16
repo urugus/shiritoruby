@@ -109,6 +109,7 @@
   border-radius: 4px;
   padding: 0.5rem;
   overflow-y: visible;
+  width: 100%;
 }
 
 .word-list li {
@@ -120,6 +121,40 @@
 
 .word-list li:last-child {
   border-bottom: none;
+}
+
+/* 単語一覧のヘッダー */
+.word-list .word-header {
+  font-weight: bold;
+  background-color: var(--light-gray);
+  padding: 0.75rem 0.5rem;
+  border-bottom: 2px solid var(--primary-color);
+}
+
+/* 単語一覧の各カラム */
+.word-turn, .word-text, .word-player, .word-description {
+  padding: 0 0.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.word-turn {
+  width: 10%;
+  text-align: center;
+}
+
+.word-text {
+  width: 25%;
+}
+
+.word-player {
+  width: 20%;
+  text-align: center;
+}
+
+.word-description {
+  width: 45%;
+  font-size: 0.9rem;
 }
 
 .word-list .player-word {
@@ -331,5 +366,31 @@
 
   .submit-button {
     width: 100%;
+  }
+
+  /* スマホ表示時の単語一覧 */
+  .word-list li {
+    flex-wrap: wrap;
+  }
+
+  .word-turn {
+    width: 15%;
+  }
+
+  .word-text {
+    width: 40%;
+  }
+
+  .word-player {
+    width: 45%;
+    text-align: right;
+  }
+
+  .word-description {
+    width: 100%;
+    padding-top: 0.25rem;
+    padding-left: 15%;
+    font-size: 0.85rem;
+    color: var(--secondary-color);
   }
 }
