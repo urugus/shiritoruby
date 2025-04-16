@@ -20,6 +20,14 @@ Rails.application.routes.draw do
     end
   end
 
+  # Words management route
+  resources :words, only: [:index] do
+    collection do
+      get :download
+      post :upload
+    end
+  end
+
   # Ranking route
   get "rankings", to: "games#rankings"
 

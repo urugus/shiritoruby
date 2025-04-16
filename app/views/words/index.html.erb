@@ -1,0 +1,76 @@
+<% content_for :title, "Shiritoruby - 単語管理" %>
+
+<div class="container">
+  <header class="game-header">
+    <h1>ShiritoRuby</h1>
+    <p class="subtitle">単語管理</p>
+  </header>
+
+  <div class="ranking-nav">
+    <a href="<%= root_path %>" class="back-to-game">ゲームに戻る</a>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header">
+      <h2>CSVファイル操作</h2>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6">
+          <h3>単語データのダウンロード</h3>
+          <p>現在登録されている単語データをCSVファイルでダウンロードできます。</p>
+          <%= link_to "CSVダウンロード", download_words_path(format: :csv), class: "btn btn-primary" %>
+        </div>
+
+        <div class="col-md-6">
+          <h3>単語データのアップロード</h3>
+          <p>CSVファイルから単語データを一括登録できます。</p>
+          <p>CSVファイルは以下の形式で作成してください：</p>
+          <pre>word,word_type,description
+example,method,This is an example method
+keyword_example,keyword,This is a keyword example</pre>
+
+          <%= form_with url: upload_words_path, method: :post, local: true, multipart: true do |form| %>
+            <div class="mb-3">
+              <%= form.label :file, "CSVファイル", class: "form-label" %>
+              <%= form.file_field :file, accept: "text/csv", class: "form-control" %>
+            </div>
+            <%= form.submit "アップロード", class: "btn btn-success" %>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>登録済み単語一覧</h2>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-striped table-hover">
+          <thead>
+            <tr>
+              <th>単語</th>
+              <th>種類</th>
+              <th>説明</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @words.each do |word| %>
+              <tr>
+                <td><%= word.word %></td>
+                <td><%= word.word_type %></td>
+                <td><%= word.description %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="d-flex justify-content-center mt-4">
+        <%= paginate @words %>
+      </div>
+    </div>
+  </div>
+</div>
