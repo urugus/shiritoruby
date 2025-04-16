@@ -1,6 +1,6 @@
 output "ecr_repository_url" {
   description = "The URL of the ECR repository"
-  value       = aws_ecr_repository.shiritoruby.repository_url
+  value       = var.use_existing_infrastructure ? "Using existing ECR repository" : aws_ecr_repository.shiritoruby[0].repository_url
 }
 
 output "alb_dns_name" {
@@ -15,31 +15,31 @@ output "database_endpoint" {
 
 output "ecs_cluster_name" {
   description = "The name of the ECS cluster"
-  value       = aws_ecs_cluster.main.name
+  value       = var.use_existing_infrastructure ? "Using existing ECS cluster" : aws_ecs_cluster.main[0].name
 }
 
 output "ecs_service_name" {
   description = "The name of the ECS service"
-  value       = aws_ecs_service.app.name
+  value       = var.use_existing_infrastructure ? "Using existing ECS service" : aws_ecs_service.app[0].name
 }
 
 output "ecr_push_commands" {
   description = "Commands to build and push Docker image to ECR"
   value       = <<EOF
 # ECRにログイン
-aws ecr get-login-password --region ${var.aws_region} | docker login --username AWS --password-stdin ${aws_ecr_repository.shiritoruby.repository_url}
+aws ecr get-login-password --region ${var.aws_region} | docker login --username AWS --password-stdin ${var.use_existing_infrastructure ? "your-ecr-repository-url" : aws_ecr_repository.shiritoruby[0].repository_url}
 
 # 通常のDockerビルド（ローカル開発用）
 docker build -t ${var.app_name} .
-docker tag ${var.app_name}:latest ${aws_ecr_repository.shiritoruby.repository_url}:latest
-docker push ${aws_ecr_repository.shiritoruby.repository_url}:latest
+docker tag ${var.app_name}:latest ${var.use_existing_infrastructure ? "your-ecr-repository-url" : aws_ecr_repository.shiritoruby[0].repository_url}:latest
+docker push ${var.use_existing_infrastructure ? "your-ecr-repository-url" : aws_ecr_repository.shiritoruby[0].repository_url}:latest
 
 # マルチアーキテクチャイメージのビルドとプッシュ（本番デプロイ用）
 # Docker Buildxビルダーを作成
 docker buildx create --name mybuilder --use
 
 # マルチアーキテクチャイメージをビルドしてプッシュ
-docker buildx build --platform linux/amd64,linux/arm64 -t ${aws_ecr_repository.shiritoruby.repository_url}:latest --push .
+docker buildx build --platform linux/amd64,linux/arm64 -t ${var.use_existing_infrastructure ? "your-ecr-repository-url" : aws_ecr_repository.shiritoruby[0].repository_url}:latest --push .
 
 # ビルダーを削除（オプション）
 # docker buildx rm mybuilder
@@ -51,8 +51,8 @@ output "db_migration_command" {
   value       = <<EOF
 # データベースマイグレーションを実行するためのECSタスクを実行
 aws ecs run-task \\
-  --cluster ${aws_ecs_cluster.main.name} \\
-  --task-definition ${aws_ecs_task_definition.app.family}:${aws_ecs_task_definition.app.revision} \\
+  --cluster ${var.use_existing_infrastructure ? "your-ecs-cluster-name" : aws_ecs_cluster.main[0].name} \\
+  --task-definition ${var.use_existing_infrastructure ? "your-task-definition-family:revision" : "${aws_ecs_task_definition.app[0].family}:${aws_ecs_task_definition.app[0].revision}"} \\
   --launch-type FARGATE \\
   --network-configuration "awsvpcConfiguration={subnets=[${var.use_existing_infrastructure ? "subnet-xxxxx" : aws_subnet.private_1[0].id}],securityGroups=[${var.use_existing_infrastructure ? "sg-xxxxx" : aws_security_group.ecs[0].id}],assignPublicIp=ENABLED}" \\
   --overrides '{"containerOverrides": [{"name": "${var.app_name}", "command": ["./bin/rails", "db:migrate"]}]}'
@@ -71,7 +71,7 @@ output "domain_setup_instructions" {
 
 output "github_actions_role_arn" {
   description = "The ARN of the IAM role for GitHub Actions OIDC"
-  value       = aws_iam_role.github_actions.arn
+  value       = aws_iam_role.github_actions[0].arn
 }
 
 output "github_actions_oidc_setup" {
@@ -100,8 +100,8 @@ output "github_actions_oidc_setup" {
      - name: Configure AWS credentials
        uses: aws-actions/configure-aws-credentials@v4
        with:
-         role-to-assume: ${aws_iam_role.github_actions.arn}
-         aws-region: $${{ secrets.AWS_REGION }}
+         role-to-assume: ${aws_iam_role.github_actions[0].arn}
+         aws-region: "$${secrets.AWS_REGION}"
    ```
 EOF
 }
