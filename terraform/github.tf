@@ -44,8 +44,9 @@ resource "aws_iam_role" "github_actions" {
 
 # ECRとECSの権限をロールに付与
 resource "aws_iam_role_policy" "github_actions_ecr_ecs" {
+  count = var.use_existing_infrastructure ? 0 : 1
   name = "github-actions-ecr-ecs-policy"
-  role = aws_iam_role.github_actions.id
+  role = aws_iam_role.github_actions[0].id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -95,8 +96,9 @@ resource "aws_iam_role_policy" "github_actions_ecr_ecs" {
 
 # Terraformインフラ作成のための追加権限
 resource "aws_iam_role_policy" "github_actions_terraform" {
+  count = var.use_existing_infrastructure ? 0 : 1
   name = "github-actions-terraform-policy"
-  role = aws_iam_role.github_actions.id
+  role = aws_iam_role.github_actions[0].id
 
   policy = jsonencode({
     Version = "2012-10-17"
