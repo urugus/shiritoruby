@@ -1,5 +1,5 @@
 class WordsController < ApplicationController
-  require 'csv'
+  require "csv"
 
   def index
     @words = Word.all.order(:word).page(params[:page]).per(50)
