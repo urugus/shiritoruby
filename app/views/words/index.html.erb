@@ -47,6 +47,19 @@ keyword_example,keyword,This is a keyword example</pre>
       <h2>登録済み単語一覧</h2>
     </div>
     <div class="card-body">
+      <!-- 検索フォーム -->
+      <div class="search-form mb-4">
+        <%= form_with url: words_path, method: :get, local: true, class: "d-flex" do |form| %>
+          <div class="input-group">
+            <%= form.text_field :query, value: @query, placeholder: "単語または説明を検索", class: "form-control" %>
+            <button type="submit" class="btn btn-primary">検索</button>
+            <% if @query.present? %>
+              <%= link_to "クリア", words_path, class: "btn btn-outline-secondary" %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+
       <div class="table-responsive">
         <table class="table table-striped table-hover">
           <thead>
@@ -54,14 +67,27 @@ keyword_example,keyword,This is a keyword example</pre>
               <th>単語</th>
               <th>種類</th>
               <th>説明</th>
+              <th>操作</th>
             </tr>
           </thead>
           <tbody>
-            <% @words.each do |word| %>
+            <% if @words.any? %>
+              <% @words.each do |word| %>
+                <tr>
+                  <td><%= word.word %></td>
+                  <td><%= word.word_type %></td>
+                  <td><%= word.description %></td>
+                  <td>
+                    <%= link_to "削除", word_path(word),
+                        method: :delete,
+                        data: { turbo_method: :delete, turbo_confirm: "単語「#{word.word}」を削除してもよろしいですか？" },
+                        class: "btn btn-sm btn-danger" %>
+                  </td>
+                </tr>
+              <% end %>
+            <% else %>
               <tr>
-                <td><%= word.word %></td>
-                <td><%= word.word_type %></td>
-                <td><%= word.description %></td>
+                <td colspan="4" class="text-center">単語が見つかりません</td>
               </tr>
             <% end %>
           </tbody>
