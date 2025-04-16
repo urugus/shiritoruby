@@ -76,9 +76,17 @@ class Api::GamesController < ApplicationController
       # プレイヤーの入力を処理した後、コンピューターの応答も取得
       computer_response = @session_manager.computer_turn if @session_manager.current_state == Games::SessionManager::GAME_STATE[:computer_turn]
 
-      render json: result.merge(
-        computer_response: computer_response
-      )
+      # コンピューターが投了した場合は単語の説明も含める
+      if computer_response && computer_response[:surrender]
+        render json: result.merge(
+          computer_response: computer_response,
+          words_with_descriptions: get_words_with_descriptions(@session_manager.game)
+        )
+      else
+        render json: result.merge(
+          computer_response: computer_response
+        )
+      end
     rescue Games::WordValidator::InvalidWordError,
            Games::WordValidator::WordAlreadyUsedError,
            Games::WordValidator::InvalidFirstLetterError => e
@@ -96,7 +104,8 @@ class Api::GamesController < ApplicationController
       render json: {
         game_over: true,
         message: "制限時間を超過しました。コンピューターの勝利です。",
-        game: @session_manager.game_state
+        game: @session_manager.game_state,
+        words_with_descriptions: get_words_with_descriptions(@session_manager.game)
       }
     else
       render json: { error: "現在プレイヤーのターンではありません" }, status: :bad_request
@@ -104,6 +113,18 @@ class Api::GamesController < ApplicationController
   end
 
   private
+
+  # ゲームで使用された単語とその説明を取得
+  def get_words_with_descriptions(game)
+    game.game_words.includes(:word).by_turn_order.map do |game_word|
+      {
+        word: game_word.word.word,
+        description: game_word.word.description,
+        player: game_word.turn.odd? ? "player" : "computer"
+      }
+    end
+  end
+
   # セッションからゲームセッションマネージャーを取得
   def set_session_manager
     # セッションIDを取得（ヘッダーまたはURLパラメータから）
