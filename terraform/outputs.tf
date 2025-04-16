@@ -71,12 +71,12 @@ output "domain_setup_instructions" {
 
 output "github_actions_role_arn" {
   description = "The ARN of the IAM role for GitHub Actions OIDC"
-  value       = aws_iam_role.github_actions[0].arn
+  value       = var.use_existing_infrastructure ? "Using existing GitHub Actions role" : aws_iam_role.github_actions[0].arn
 }
 
 output "github_actions_oidc_setup" {
   description = "Instructions for setting up GitHub Actions OIDC authentication"
-  value       = <<EOF
+  value       = var.use_existing_infrastructure ? "Using existing GitHub Actions OIDC setup" : <<EOF
 # GitHub ActionsでOIDC認証を使用するための設定手順
 
 1. GitHubリポジトリの「Settings」→「Secrets and variables」→「Actions」で以下のシークレットを設定します：
