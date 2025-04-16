@@ -157,6 +157,43 @@ RSpec.describe WordsController, type: :controller do
         expect(flash[:alert]).to include("CSVファイルのみアップロード可能です")
       end
     end
+
+    describe "DELETE #bulk_destroy" do
+      context "with selected word ids" do
+        it "deletes multiple words" do
+          word1 = create(:word, word: "bulk_delete_test1")
+          word2 = create(:word, word: "bulk_delete_test2")
+          word3 = create(:word, word: "bulk_delete_test3")
+
+          expect {
+            delete :bulk_destroy, params: { word_ids: { word1.id.to_s => word1.id, word2.id.to_s => word2.id } }
+          }.to change(Word, :count).by(-2)
+
+          expect(Word.find_by(id: word1.id)).to be_nil
+          expect(Word.find_by(id: word2.id)).to be_nil
+          expect(Word.find_by(id: word3.id)).to be_present
+        end
+
+        it "redirects to words_path with a success message" do
+          word1 = create(:word, word: "bulk_delete_test4")
+          word2 = create(:word, word: "bulk_delete_test5")
+
+          delete :bulk_destroy, params: { word_ids: { word1.id.to_s => word1.id, word2.id.to_s => word2.id } }
+
+          expect(response).to redirect_to(words_path)
+          expect(flash[:notice]).to include("2件の単語を削除しました")
+        end
+      end
+
+      context "with no word ids" do
+        it "redirects to words_path with an alert message" do
+          delete :bulk_destroy
+
+          expect(response).to redirect_to(words_path)
+          expect(flash[:alert]).to include("削除する単語を選択してください")
+        end
+      end
+    end
   end
 
   describe "DELETE #destroy" do

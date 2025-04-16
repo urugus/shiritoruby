@@ -60,38 +60,72 @@ keyword_example,keyword,This is a keyword example</pre>
         <% end %>
       </div>
 
-      <div class="table-responsive">
-        <table class="table table-striped table-hover">
-          <thead>
-            <tr>
-              <th>単語</th>
-              <th>種類</th>
-              <th>説明</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% if @words.any? %>
-              <% @words.each do |word| %>
+      <div data-controller="bulk-delete">
+        <%= form_with url: bulk_destroy_words_path, method: :delete, local: true, id: "bulk-delete-form" do |form| %>
+          <div class="mb-3 d-flex justify-content-end">
+            <%= form.submit "選択した単語を削除", class: "btn btn-danger",
+                data: {
+                  turbo_confirm: "選択した単語を削除してもよろしいですか？",
+                  bulk_delete_target: "bulkDeleteButton"
+                },
+                disabled: true %>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-striped table-hover">
+              <thead>
                 <tr>
-                  <td><%= word.word %></td>
-                  <td><%= word.word_type %></td>
-                  <td><%= word.description %></td>
-                  <td>
-                    <%= link_to "削除", word_path(word),
-                        method: :delete,
-                        data: { turbo_method: :delete, turbo_confirm: "単語「#{word.word}」を削除してもよろしいですか？" },
-                        class: "btn btn-sm btn-danger" %>
-                  </td>
+                  <th>
+                    <div class="form-check">
+                      <%= check_box_tag "select-all", "", false,
+                          class: "form-check-input",
+                          data: {
+                            bulk_delete_target: "selectAll",
+                            action: "change->bulk-delete#toggleAll"
+                          } %>
+                      <label class="form-check-label" for="select-all">全選択</label>
+                    </div>
+                  </th>
+                  <th>単語</th>
+                  <th>種類</th>
+                  <th>説明</th>
+                  <th>操作</th>
                 </tr>
-              <% end %>
-            <% else %>
-              <tr>
-                <td colspan="4" class="text-center">単語が見つかりません</td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
+              </thead>
+              <tbody>
+                <% if @words.any? %>
+                  <% @words.each do |word| %>
+                    <tr>
+                      <td>
+                        <div class="form-check">
+                          <%= check_box_tag "word_ids[#{word.id}]", word.id, false,
+                              class: "form-check-input",
+                              data: {
+                                bulk_delete_target: "wordCheckbox",
+                                action: "change->bulk-delete#toggleOne"
+                              } %>
+                        </div>
+                      </td>
+                      <td><%= word.word %></td>
+                      <td><%= word.word_type %></td>
+                      <td><%= word.description %></td>
+                      <td>
+                        <%= link_to "削除", word_path(word),
+                            method: :delete,
+                            data: { turbo_method: :delete, turbo_confirm: "単語「#{word.word}」を削除してもよろしいですか？" },
+                            class: "btn btn-sm btn-danger" %>
+                      </td>
+                    </tr>
+                  <% end %>
+                <% else %>
+                  <tr>
+                    <td colspan="5" class="text-center">単語が見つかりません</td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% end %>
       </div>
 
       <div class="d-flex justify-content-center mt-4">
