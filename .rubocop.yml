@@ -7,6 +7,10 @@ inherit_gem: { rubocop-rails-omakase: rubocop.yml }
 Layout/SpaceInsideArrayLiteralBrackets:
   Enabled: false
 
+# ファイル末尾の改行チェックを無効化
+Layout/TrailingEmptyLines:
+  Enabled: false
+
 # JavaScriptファイルを検査から除外
 AllCops:
   Exclude:
