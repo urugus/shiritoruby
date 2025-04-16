@@ -143,4 +143,36 @@ RSpec.describe "Words", type: :system do
       expect(page).not_to have_content(@word.word)
     end
   end
+
+  describe "複数選択削除機能", js: false do
+    before do
+      # テスト用の単語を作成
+      @word1 = create(:word, word: "bulk_delete_test1", description: "Bulk delete test 1")
+      @word2 = create(:word, word: "bulk_delete_test2", description: "Bulk delete test 2")
+      @word3 = create(:word, word: "bulk_delete_test3", description: "Bulk delete test 3")
+
+      visit words_path
+    end
+
+    it "複数の単語を選択して一括削除できる" do
+      # 削除前の単語数を記録
+      initial_count = Word.count
+
+      # 単語を選択
+      check "word_ids[#{@word1.id}]"
+      check "word_ids[#{@word2.id}]"
+
+      # 削除ボタンを直接送信（JavaScriptなしのテストのため）
+      page.driver.submit :delete, bulk_destroy_words_path, { "word_ids" => { @word1.id.to_s => @word1.id, @word2.id.to_s => @word2.id } }
+
+      # 削除後のページを表示
+      visit words_path
+
+      # 単語が削除されたことを確認
+      expect(Word.count).to eq(initial_count - 2)
+      expect(page).not_to have_content(@word1.word)
+      expect(page).not_to have_content(@word2.word)
+      expect(page).to have_content(@word3.word)
+    end
+  end
 end

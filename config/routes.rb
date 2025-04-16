@@ -25,6 +25,7 @@ Rails.application.routes.draw do
     collection do
       get :download
       post :upload
+      delete :bulk_destroy
     end
   end
 

@@ -25,6 +25,31 @@ class WordsController < ApplicationController
     redirect_to words_path
   end
 
+  def bulk_destroy
+    if params[:word_ids].blank?
+      flash[:alert] = "削除する単語を選択してください。"
+      redirect_to words_path
+      return
+    end
+
+    word_ids = params[:word_ids].keys
+    deleted_count = 0
+
+    begin
+      Word.transaction do
+        words = Word.where(id: word_ids)
+        deleted_count = words.count
+        words.destroy_all
+      end
+
+      flash[:notice] = "#{deleted_count}件の単語を削除しました。"
+    rescue => e
+      flash[:alert] = "単語の削除に失敗しました。エラー: #{e.message}"
+    end
+
+    redirect_to words_path
+  end
+
   def download
     @words = Word.all.order(:word)
 
