@@ -17,6 +17,7 @@ resource "aws_iam_openid_connect_provider" "github" {
 
 # GitHub Actions用のIAMロール
 resource "aws_iam_role" "github_actions" {
+  count = var.use_existing_infrastructure ? 0 : 1
   name = "github-actions-role"
 
   assume_role_policy = jsonencode({
