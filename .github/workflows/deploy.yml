@@ -17,7 +17,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # OIDCトークンは permissions: id-token: write で自動的に利用可能になるため、
       # 明示的なactions/id-tokenステップは不要です
